@@ -149,7 +149,6 @@ private:
             double theta0 = atan2(y0,x0);
             distance = sqrt(r0*r0*cos(2*theta - 2*theta0)/2 + a*a - r0*r0/2) + r0*cos(theta-theta0);
             differential = -r0*sin(theta-theta0) - sqrt(2)*r0*r0*sin(2*theta - 2*theta0)/(2*sqrt(r0*r0*cos(2*theta - 2*theta0)+2*a-r0*r0));
-            RCLCPP_ERROR_STREAM(this->get_logger(), "distance: " << distance << ", theta: " << theta << ", s: " << s << ", t: " << t);
           } else if (i == 3){
             double x0 = 0.06;
             double y0 = 0;
@@ -164,7 +163,6 @@ private:
           point.y = distance*sin(theta);
           poly.polygon.points.push_back(point);
         }
-        // RCLCPP_ERROR_STREAM(this->get_logger(), "theta: " << theta << ", " << s << ", " << t);
       }
       theta += delta;
     }
