@@ -60,20 +60,35 @@ private:
     //   first = !first;
     // }
 
-    double r = 0.5;
-    std::size_t p_num = 100;
-    double offset_x = -0.3;
-    double offset_y = -0.15;
 
+    std::size_t p_num = 100;
     double delta = 2*M_PI/(double)p_num;
     double theta = 0.0;
-    for(std::size_t i = 0; i < p_num; i++){
-      point.x = r*cos(theta) + offset_x;
-      point.y = r*sin(theta) + offset_y;
-      poly.polygon.points.push_back(point);
-      theta += delta;
+
+    {
+      double x = 0.06;
+      double y = 0;
+      double r = sqrt(0.16*0.16 + 0.085*0.085);
+      for(std::size_t i = 0; i < p_num; i++){
+        point.x = r*cos(theta) + x;
+        point.y = r*sin(theta) + y;
+        poly.polygon.points.push_back(point);
+        theta += delta;
+      }
+      collision_poly_pub_->publish(poly);
     }
-    collision_poly_pub_->publish(poly);
+    {
+      double x = -0.06;
+      double y = -0.17;
+      double r = 0.2;
+      for(std::size_t i = 0; i < p_num; i++){
+        point.x = r*cos(theta) + x;
+        point.y = r*sin(theta) + y;
+        poly.polygon.points.push_back(point);
+        theta += delta;
+      }
+      collision_poly_pub_->publish(poly);
+    }
   }
   rclcpp::Publisher<geometry_msgs::msg::PolygonStamped>::SharedPtr collision_poly_pub_;
   rclcpp::TimerBase::SharedPtr timer_;
