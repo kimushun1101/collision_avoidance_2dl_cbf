@@ -117,9 +117,6 @@ private:
     points_of_tangency_[2].y = (-Y*R*r2 + X*r2*sqX2Y2mR2)/X2pY2 + y2;
 
     points_of_tangency_.push_back(points_of_tangency_[0]);
-    // for (std::size_t i = 0; i < points_of_tangency_.size()-1; i++) {
-    //   RCLCPP_ERROR_STREAM(this->get_logger(), "i: " << i << ", points_of_tangency_x: " << points_of_tangency_[i].x << ", points_of_tangency_y: " << points_of_tangency_[i].y);
-    // }
 
 
     theta = -M_PI;
