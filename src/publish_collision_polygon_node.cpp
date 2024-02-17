@@ -72,7 +72,7 @@ private:
       for(std::size_t i = 0; i < p_num; i++){
         point.x = r*cos(theta) + x;
         point.y = r*sin(theta) + y;
-        // poly.polygon.points.push_back(point);
+        poly.polygon.points.push_back(point);
         theta += delta;
       }
       // collision_poly_pub_->publish(poly);
@@ -80,11 +80,11 @@ private:
     {
       double x = -0.06;
       double y = -0.17;
-      double r = 0.2;
+      double r = 0.35;
       for(std::size_t i = 0; i < p_num; i++){
         point.x = r*cos(theta) + x;
         point.y = r*sin(theta) + y;
-        // poly.polygon.points.push_back(point);
+        poly.polygon.points.push_back(point);
         theta += delta;
       }
     }
@@ -96,7 +96,7 @@ private:
 
     double x2 = -0.06;
     double y2 = -0.17;
-    double r2 = 0.2;
+    double r2 = 0.35;
 
     double X = x2 - x1;
     double Y = y2 - y1;
@@ -144,7 +144,7 @@ private:
           } else if (i == 1){
             double x0 = -0.06;
             double y0 = -0.17;
-            double a = 0.2;
+            double a = 0.35;
             double r0 = sqrt(x0*x0 + y0*y0);
             double theta0 = atan2(y0,x0);
             distance = sqrt(r0*r0*cos(2*theta - 2*theta0)/2 + a*a - r0*r0/2) + r0*cos(theta-theta0);
@@ -161,7 +161,7 @@ private:
           (void)differential;
           point.x = distance*cos(theta);
           point.y = distance*sin(theta);
-          poly.polygon.points.push_back(point);
+          // poly.polygon.points.push_back(point);
         }
       }
       theta += delta;

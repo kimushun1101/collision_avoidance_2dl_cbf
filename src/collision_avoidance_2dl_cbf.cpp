@@ -61,7 +61,7 @@ CollisionAvoidance2dlCBF::CollisionAvoidance2dlCBF() : Node("collision_avoidance
 
   double x2 = -0.06;
   double y2 = -0.17;
-  double r2 = 0.2;
+  double r2 = 0.35;
 
   double X = x2 - x1;
   double Y = y2 - y1;
@@ -147,6 +147,10 @@ void CollisionAvoidance2dlCBF::publishAssistInput()
     // step 4: calculate B and LgB
     double L = 0.001;
     double ri_rc = r_[i] - r_ci;
+    if (ri_rc < 0){
+      RCLCPP_ERROR_STREAM(this->get_logger(), "r_i - r_ci < 0: " << r_[i] << ", " << r_ci);
+      // continue;
+    }
     double ri_rc_sq = ri_rc * ri_rc;
     B += 1.0/ri_rc + L*(r_[i]*r_[i] + r_ci*r_ci);
     LgB1 +=  (1.0/ri_rc_sq - 2.0*L*r_[i]) * cos(theta_[i]);
@@ -231,12 +235,9 @@ bool CollisionAvoidance2dlCBF::calculateCollisionDistanceAndDifferential(const d
         distance = a/cos(theta - alpha);
         differential = a*tan(theta - alpha)/(cos(theta - alpha));
       } else if (i == 1){
-        // double x0 = 0.06;
-        // double y0 = 0;
-        // double a = sqrt(0.16*0.16 + 0.085*0.085);
         double x0 = -0.06;
         double y0 = -0.17;
-        double a = 0.2;
+        double a = 0.35;
         double r0 = sqrt(x0*x0 + y0*y0);
         double theta0 = atan2(y0, x0);
         distance = sqrt(r0*r0*cos(2*theta - 2*theta0)/2 + a*a - r0*r0/2) + r0*cos(theta-theta0);
@@ -245,9 +246,6 @@ bool CollisionAvoidance2dlCBF::calculateCollisionDistanceAndDifferential(const d
         double x0 = 0.06;
         double y0 = 0;
         double a = sqrt(0.16*0.16 + 0.085*0.085);
-        // double x0 = -0.06;
-        // double y0 = -0.17;
-        // double a = 0.2;
         double r0 = sqrt(x0*x0 + y0*y0);
         double theta0 = atan2(y0, x0);
         distance = sqrt(r0*r0*cos(2*theta - 2*theta0)/2 + a*a - r0*r0/2) + r0*cos(theta-theta0);
