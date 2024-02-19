@@ -65,6 +65,11 @@ private:
     double offset_x = -0.3;
     double offset_y = -0.15;
 
+    // double r = 0.3;
+    // std::size_t p_num = 100;
+    // double offset_x = 0.032;
+    // double offset_y = 0.0;
+
     double delta = 2*M_PI/(double)p_num;
     double theta = 0.0;
     for(std::size_t i = 0; i < p_num; i++){
