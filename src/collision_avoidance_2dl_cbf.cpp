@@ -41,7 +41,7 @@ CollisionAvoidance2dlCBF::CollisionAvoidance2dlCBF() : Node("collision_avoidance
   geometry_msgs::msg::TransformStamped t;
   while (true) {
     try {
-      t = tf_buffer_->lookupTransform(scan_frame_name_, base_frame_name_, tf2::TimePointZero);
+      t = tf_buffer_->lookupTransform(base_frame_name_, scan_frame_name_, tf2::TimePointZero);
       BxS_ = t.transform.translation.x;
       ByS_ = t.transform.translation.y;
       auto q0 = t.transform.rotation.w;
@@ -52,7 +52,7 @@ CollisionAvoidance2dlCBF::CollisionAvoidance2dlCBF() : Node("collision_avoidance
       RCLCPP_INFO_STREAM(this->get_logger(), "[x, y, yaw] : " << BxS_ << ", " << ByS_ << ", " << BthetaS_);
       break;
     } catch (const tf2::TransformException & ex) {
-      RCLCPP_WARN(this->get_logger(), "Could not transform %s to %s: %s", scan_frame_name_.c_str(), base_frame_name_.c_str(), ex.what());
+      RCLCPP_WARN(this->get_logger(), "Could not transform %s to %s: %s", base_frame_name_.c_str(), scan_frame_name_.c_str(), ex.what());
     }
     rclcpp::sleep_for(std::chrono::seconds(1));
   }
@@ -160,9 +160,9 @@ void CollisionAvoidance2dlCBF::publishAssistInput()
     // step 4: calculate B and LgB
     double L = 0.001;
     double ri_rc = r_[i] - r_ci;
-    if (ri_rc < 0){
-      RCLCPP_ERROR_STREAM(this->get_logger(), "r_i - r_ci < 0: " << r_[i] << ", " << r_ci);
-      // continue;
+    if (ri_rc < 0.0){
+      RCLCPP_ERROR_STREAM(this->get_logger(), "r_i - r_ci < 0: " << r_[i] << ", " << r_ci << ", " << theta);
+      continue;
     }
     double ri_rc_sq = ri_rc * ri_rc;
     B += 1.0/ri_rc + L*(r_[i]*r_[i] + r_ci*r_ci);
