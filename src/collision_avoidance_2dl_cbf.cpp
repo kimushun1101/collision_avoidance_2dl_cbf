@@ -56,37 +56,6 @@ CollisionAvoidance2dlCBF::CollisionAvoidance2dlCBF() : Node("collision_avoidance
     }
     rclcpp::sleep_for(std::chrono::seconds(1));
   }
-
-  double x1 = 0.06;
-  double y1 = 0;
-  double r1 = sqrt(0.16*0.16 + 0.085*0.085);
-
-  double x2 = -0.06;
-  double y2 = -0.17;
-  double r2 = 0.35;
-
-  double X = x2 - x1;
-  double Y = y2 - y1;
-  double R = r2 - r1;
-  double X2pY2 = X*X+Y*Y;
-  double sqX2Y2mR2 = sqrt(X2pY2-R*R);
-
-  points_of_tangency_.resize(4);
-
-  points_of_tangency_[0].x = (-X*R*r1 + Y*r1*sqX2Y2mR2)/X2pY2 + x1;
-  points_of_tangency_[0].y = (-Y*R*r1 - X*r1*sqX2Y2mR2)/X2pY2 + y1;
-
-  points_of_tangency_[1].x = (-X*R*r2 + Y*r2*sqX2Y2mR2)/X2pY2 + x2;
-  points_of_tangency_[1].y = (-Y*R*r2 - X*r2*sqX2Y2mR2)/X2pY2 + y2;
-
-  points_of_tangency_[3].x = (-X*R*r1 - Y*r1*sqX2Y2mR2)/X2pY2 + x1;
-  points_of_tangency_[3].y = (-Y*R*r1 + X*r1*sqX2Y2mR2)/X2pY2 + y1;
-
-  points_of_tangency_[2].x = (-X*R*r2 - Y*r2*sqX2Y2mR2)/X2pY2 + x2;
-  points_of_tangency_[2].y = (-Y*R*r2 + X*r2*sqX2Y2mR2)/X2pY2 + y2;
-
-  points_of_tangency_.push_back(points_of_tangency_[0]);
-
   RCLCPP_INFO(this->get_logger(), "Creating node");
 }
 

@@ -65,6 +65,4 @@ private:
   std::vector<double> r_, theta_;
   double BxS_, ByS_, BthetaS_;
   float u_h1_, u_h2_;
-
-  std::vector<Point>  points_of_tangency_;
 };
