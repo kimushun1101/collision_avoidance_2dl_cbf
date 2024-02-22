@@ -138,7 +138,7 @@ void CollisionAvoidance2dlCBF::publishAssistInput()
     BtoP.x = r_[i]*cos(theta_[i]);
     BtoP.y = r_[i]*sin(theta_[i]);
     Point BtoC;
-    std::size_t poly_num = 10000;
+    std::size_t poly_num;
     if (!calculatePolygonIntersection(BtoP, BtoC, poly_num))
       continue;
 
@@ -231,52 +231,3 @@ bool CollisionAvoidance2dlCBF::calculatePolygonIntersection(const Point& target,
   return false;
 }
 
-bool CollisionAvoidance2dlCBF::calculateCollisionDistanceAndDifferential(const double& theta, double& distance, double& differential)
-{
-  for (std::size_t i = 0; i < points_of_tangency_.size()-1; i++) {
-    double x1 = points_of_tangency_[i].x;
-    double y1 = points_of_tangency_[i].y;
-    double x2 = points_of_tangency_[i+1].x;
-    double y2 = points_of_tangency_[i+1].y;
-    double s = atan2(y1, x1);
-    double t = atan2(y2, x2);
-    if (s > t){
-      if (theta > 0) t += 2*M_PI;
-      else s -= 2*M_PI;
-    }
-    if (s < theta && theta < t) {
-      if (i%2 == 0){
-        double a  = abs(x2*y1 - x1*y2)/sqrt((y2-y1)*(y2-y1)+(x1-x2)*(x1-x2));
-        double alpha = atan2(-(x2-x1),(y2-y1));
-        distance = a/cos(theta - alpha);
-        differential = a*tan(theta - alpha)/(cos(theta - alpha));
-      } else if (i == 1){
-        double x0 = -0.06;
-        double y0 = -0.17;
-        double a = 0.35;
-        double r0 = sqrt(x0*x0 + y0*y0);
-        double theta0 = atan2(y0, x0);
-        distance = sqrt(r0*r0*cos(2*theta - 2*theta0)/2 + a*a - r0*r0/2) + r0*cos(theta-theta0);
-        differential = -r0*sin(theta-theta0) - sqrt(2)*r0*r0*sin(2*theta - 2*theta0)/(2*sqrt(r0*r0*cos(2*theta - 2*theta0)+2*a*a-r0*r0));
-      } else if (i == 3){
-        double x0 = 0.06;
-        double y0 = 0;
-        double a = sqrt(0.16*0.16 + 0.085*0.085);
-        double r0 = sqrt(x0*x0 + y0*y0);
-        double theta0 = atan2(y0, x0);
-        distance = sqrt(r0*r0*cos(2*theta - 2*theta0)/2 + a*a - r0*r0/2) + r0*cos(theta-theta0);
-        differential = -r0*sin(theta-theta0) - sqrt(2)*r0*r0*sin(2*theta - 2*theta0)/(2*sqrt(r0*r0*cos(2*theta - 2*theta0)+2*a*a-r0*r0));
-      }
-      return true;
-    }
-  }
-  for (std::size_t i = 0; i < points_of_tangency_.size()-1; i++) {
-    double x1 = points_of_tangency_[i].x;
-    double y1 = points_of_tangency_[i].y;
-    double x2 = points_of_tangency_[i+1].x;
-    double y2 = points_of_tangency_[i+1].y;
-    RCLCPP_ERROR_STREAM(this->get_logger(), "x1, y1, atan: (" << x1 << ", " << y1 << "), (" << x2 << ", " << y2 << "), "  << atan2(y1, x1) << ", "  << atan2(y2, x2));
-  }
-  RCLCPP_ERROR_STREAM(this->get_logger(), "theta, r_ci, drc_dtheta: " << theta << ", " << distance << ", " << differential);
-  return false;
-}

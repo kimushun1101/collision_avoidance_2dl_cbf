@@ -48,7 +48,6 @@ private:
   void publishAssistInput();
   bool calculateLineIntersection(const Point& p1, const Point& p2, const Point& p3, const Point& p4, Point& intersection);
   bool calculatePolygonIntersection(const Point& target, Point& intersection, std::size_t& number);
-  bool calculateCollisionDistanceAndDifferential(const double& theta, double& distance, double& differential);
 
   rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_out_pub_;
   rclcpp::Subscription<geometry_msgs::msg::Twist>::ConstSharedPtr cmd_vel_in_sub_;
