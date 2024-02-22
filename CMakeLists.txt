@@ -24,6 +24,6 @@ find_package(ament_cmake_auto REQUIRED)
 ament_auto_find_build_dependencies()
 
 ament_auto_add_executable(collision_avoidance_2dl_cbf_node src/collision_avoidance_2dl_cbf_node.cpp src/collision_avoidance_2dl_cbf.cpp)
-ament_auto_add_executable(publish_collision_polygon_node src/publish_collision_polygon_node.cpp)
+ament_auto_add_executable(publish_collision_polygon_node src/publish_collision_polygon_node.cpp src/publish_collision_polygon.cpp)
 
 ament_auto_package(INSTALL_TO_SHARE launch config)
