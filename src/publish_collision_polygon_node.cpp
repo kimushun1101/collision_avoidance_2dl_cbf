@@ -29,6 +29,8 @@ public:
     poly_row_ = this->get_parameter("collision_polygon").as_double_array();
 
     collision_poly_pub_ = this->create_publisher<geometry_msgs::msg::PolygonStamped>("collision_polygon", 10);
+    robot_poly_pub_ = this->create_publisher<geometry_msgs::msg::PolygonStamped>("robot_polygon", 10);
+    user_poly_pub_ = this->create_publisher<geometry_msgs::msg::PolygonStamped>("user_polygon", 10);
     std::chrono::milliseconds sampling_period{(int)(1000.0)};
     timer_ = this->create_wall_timer(
       sampling_period, std::bind(&PublishBodyPolygon::timer_callback, this));
@@ -37,6 +39,12 @@ public:
   }
 
 private:
+  struct Circle {
+    double x;
+    double y;
+    double r;
+  };
+  
   void timer_callback()
   {
     auto poly = geometry_msgs::msg::PolygonStamped();
@@ -45,76 +53,65 @@ private:
   
     auto point = geometry_msgs::msg::Point32();
 
-    // polygon
-    // if (poly_row_.size() <= 6 || poly_row_.size() % 2 != 0) {
-    //   RCLCPP_ERROR(this->get_logger(), "Polygon has incorrect points description");
-    //   return;
-    // }
-    // bool first = true;
-    // // navigation2/nav2_collision_monitor/src/polygon.cpp
-    // for (double val : poly_row_) {
-    //   if (first) {
-    //     point.x = val;
-    //   } else {
-    //     point.y = val;
-    //     poly.polygon.points.push_back(point);
-    //   }
-    //   first = !first;
-    // }
-
     // circle
     std::size_t p_num = 20;
     double delta = 2*M_PI/(double)p_num;
     double theta = 0.0;
-    double ox1 = 0.06;
-    double oy1 = 0;
-    double or1 = sqrt(0.16*0.16 + 0.085*0.085);
+    Circle robot, user;
+    robot.x = 0.06;
+    robot.y = 0;
+    robot.r = sqrt(0.16*0.16 + 0.085*0.085);
 
-    double ox2 = -0.06;
-    double oy2 = -0.17;
-    double or2 = 0.30;
+    user.x = -0.06;
+    user.y = -0.17;
+    user.r = 0.30;
 
-    // double r, offset_x, offset_y;
-    // offset_x = ox1;
-    // offset_y = oy1;
-    // r = or1;
-    // for(std::size_t i = 0; i < p_num; i++){
-    //   point.x = r*cos(theta) + offset_x;
-    //   point.y = r*sin(theta) + offset_y;
-    //   poly.polygon.points.push_back(point);
-    //   theta += delta;
-    // }
+    double r, offset_x, offset_y;
+    offset_x = robot.x;
+    offset_y = robot.y;
+    r = robot.r;
+    for(std::size_t i = 0; i < p_num; i++){
+      point.x = r*cos(theta) + offset_x;
+      point.y = r*sin(theta) + offset_y;
+      poly.polygon.points.push_back(point);
+      theta += delta;
+    }
+    robot_poly_pub_->publish(poly);
+    poly.polygon.points.clear();
 
-    // offset_x = ox2;
-    // offset_y = oy2;
-    // r = or2;
-    // for(std::size_t i = 0; i < p_num; i++){
-    //   point.x = r*cos(theta) + offset_x;
-    //   point.y = r*sin(theta) + offset_y;
-    //   poly.polygon.points.push_back(point);
-    //   theta += delta;
-    // }
+
+    offset_x = user.x;
+    offset_y = user.y;
+    r = user.r;
+    for(std::size_t i = 0; i < p_num; i++){
+      point.x = r*cos(theta) + offset_x;
+      point.y = r*sin(theta) + offset_y;
+      poly.polygon.points.push_back(point);
+      theta += delta;
+    }
+    user_poly_pub_->publish(poly);
+    poly.polygon.points.clear();
 
     // tangency
     std::vector<geometry_msgs::msg::Point32> points_of_tangency_(4); 
 
-    double X = ox2 - ox1;
-    double Y = oy2 - oy1;
-    double R = or2 - or1;
+    double X = user.x - robot.x;
+    double Y = user.y - robot.y;
+    double R = user.r - robot.r;
     double X2pY2 = X*X+Y*Y;
     double sqX2Y2mR2 = sqrt(X2pY2-R*R);
 
-    points_of_tangency_[0].x = (-X*R*or1 + Y*or1*sqX2Y2mR2)/X2pY2 + ox1;
-    points_of_tangency_[0].y = (-Y*R*or1 - X*or1*sqX2Y2mR2)/X2pY2 + oy1;
+    points_of_tangency_[0].x = (-X*R*robot.r + Y*robot.r*sqX2Y2mR2)/X2pY2 + robot.x;
+    points_of_tangency_[0].y = (-Y*R*robot.r - X*robot.r*sqX2Y2mR2)/X2pY2 + robot.y;
 
-    points_of_tangency_[1].x = (-X*R*or2 + Y*or2*sqX2Y2mR2)/X2pY2 + ox2;
-    points_of_tangency_[1].y = (-Y*R*or2 - X*or2*sqX2Y2mR2)/X2pY2 + oy2;
+    points_of_tangency_[1].x = (-X*R*user.r + Y*user.r*sqX2Y2mR2)/X2pY2 + user.x;
+    points_of_tangency_[1].y = (-Y*R*user.r - X*user.r*sqX2Y2mR2)/X2pY2 + user.y;
 
-    points_of_tangency_[3].x = (-X*R*or1 - Y*or1*sqX2Y2mR2)/X2pY2 + ox1;
-    points_of_tangency_[3].y = (-Y*R*or1 + X*or1*sqX2Y2mR2)/X2pY2 + oy1;
+    points_of_tangency_[3].x = (-X*R*robot.r - Y*robot.r*sqX2Y2mR2)/X2pY2 + robot.x;
+    points_of_tangency_[3].y = (-Y*R*robot.r + X*robot.r*sqX2Y2mR2)/X2pY2 + robot.y;
 
-    points_of_tangency_[2].x = (-X*R*or2 - Y*or2*sqX2Y2mR2)/X2pY2 + ox2;
-    points_of_tangency_[2].y = (-Y*R*or2 + X*or2*sqX2Y2mR2)/X2pY2 + oy2;
+    points_of_tangency_[2].x = (-X*R*user.r - Y*user.r*sqX2Y2mR2)/X2pY2 + user.x;
+    points_of_tangency_[2].y = (-Y*R*user.r + X*user.r*sqX2Y2mR2)/X2pY2 + user.y;
 
     points_of_tangency_.push_back(points_of_tangency_[0]);
 
@@ -142,17 +139,17 @@ private:
             distance = a/cos(theta - alpha);
             differential = a*tan(theta - alpha)/(cos(theta - alpha));
           } else if (i == 3){
-            double x0 = ox1;
-            double y0 = oy1;
-            double a = or1;
+            double x0 = robot.x;
+            double y0 = robot.y;
+            double a = robot.r;
             double r0 = sqrt(x0*x0 + y0*y0);
             double theta0 = atan2(y0,x0);
             distance = sqrt(r0*r0*cos(2*theta - 2*theta0)/2 + a*a - r0*r0/2) + r0*cos(theta-theta0);
             differential = -r0*sin(theta-theta0) - sqrt(2)*r0*r0*sin(2*theta - 2*theta0)/(2*sqrt(r0*r0*cos(2*theta - 2*theta0)+2*a-r0*r0));
           } else if (i == 1){
-            double x0 = ox2;
-            double y0 = oy2;
-            double a = or2;
+            double x0 = user.x;
+            double y0 = user.y;
+            double a = user.r;
             double r0 = sqrt(x0*x0 + y0*y0);
             double theta0 = atan2(y0, x0);
             distance = sqrt(r0*r0*cos(2*theta - 2*theta0)/2 + a*a - r0*r0/2) + r0*cos(theta-theta0);
@@ -170,7 +167,7 @@ private:
     collision_poly_pub_->publish(poly);
   }
 
-  rclcpp::Publisher<geometry_msgs::msg::PolygonStamped>::SharedPtr collision_poly_pub_;
+  rclcpp::Publisher<geometry_msgs::msg::PolygonStamped>::SharedPtr collision_poly_pub_, robot_poly_pub_, user_poly_pub_;
   rclcpp::TimerBase::SharedPtr timer_;
   std::string base_frame_id_;
   std::vector<double> poly_row_;

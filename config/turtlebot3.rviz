@@ -9,6 +9,8 @@ Panels:
         - /TF1/Frames1
         - /TF1/Tree1
         - /Polygon1
+        - /Polygon2
+        - /Polygon3
       Splitter Ratio: 0.5833333134651184
     Tree Height: 563
   - Class: rviz_common/Selection
@@ -226,7 +228,33 @@ Visualization Manager:
         Filter size: 10
         History Policy: Keep Last
         Reliability Policy: Reliable
+        Value: /robot_polygon
+      Value: true
+    - Alpha: 1
+      Class: rviz_default_plugins/Polygon
+      Color: 143; 240; 164
+      Enabled: true
+      Name: Polygon
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
         Value: /collision_polygon
+      Value: true
+    - Alpha: 1
+      Class: rviz_default_plugins/Polygon
+      Color: 53; 132; 228
+      Enabled: true
+      Name: Polygon
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /user_polygon
       Value: true
   Enabled: true
   Global Options:
@@ -266,16 +294,16 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/XYOrbit
-      Distance: 3.292726516723633
+      Distance: 2.1252007484436035
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: -0.5180519819259644
-        Y: -0.20622584223747253
-        Z: -4.76837158203125e-06
+        X: -0.3338138461112976
+        Y: -0.012940943241119385
+        Z: -4.708766937255859e-06
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
