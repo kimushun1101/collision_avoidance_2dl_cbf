@@ -75,9 +75,17 @@ void CollisionAvoidance2dlCBF::scanCallback(sensor_msgs::msg::LaserScan::ConstSh
 {
   r_.resize(msg->ranges.size());
   theta_.resize(r_.size());
+
+  // step 1: calculate r_i and theta_i
+  double SrP, SthetaP, BxP, ByP;
   for (std::size_t i = 0; i < r_.size(); i++) {
-    r_[i] = (msg->ranges[i] < msg->range_max) ? msg->ranges[i] : msg->range_max;
-    theta_[i] = msg->angle_min + i * msg->angle_increment;
+    SrP = msg->ranges[i];
+    if(SrP > msg->range_max) SrP = msg->range_max;
+    SthetaP = msg->angle_min + i * msg->angle_increment;
+    BxP = SrP * cos(SthetaP + BthetaS_) + BxS_;
+    ByP = SrP * sin(SthetaP + BthetaS_) + ByS_;
+    r_[i] = sqrt(BxP*BxP + ByP*ByP);
+    theta_[i] = atan2(ByP, BxP);
   }
   publishAssistInput();
 }
@@ -112,14 +120,10 @@ void CollisionAvoidance2dlCBF::publishAssistInput()
       continue;
 
     // step 3: calculate r_ci and drc_dtheta
-    double BxP1 = collision_poly_[poly_num].x;
-    double ByP1 = collision_poly_[poly_num].y;
-    double BxP2 = collision_poly_[poly_num+1].x;
-    double ByP2 = collision_poly_[poly_num+1].y;
-    double x1 =  (BxP1 - BxS_)*cos(BthetaS_) + (ByP1 - ByS_)*sin(BthetaS_);
-    double y1 = -(BxP1 - BxS_)*sin(BthetaS_) + (ByP1 - ByS_)*cos(BthetaS_);
-    double x2 =  (BxP2 - BxS_)*cos(BthetaS_) + (ByP2 - ByS_)*sin(BthetaS_);
-    double y2 = -(BxP2 - BxS_)*sin(BthetaS_) + (ByP2 - ByS_)*cos(BthetaS_);
+    double x1 = collision_poly_[poly_num].x;
+    double y1 = collision_poly_[poly_num].y;
+    double x2 = collision_poly_[poly_num+1].x;
+    double y2 = collision_poly_[poly_num+1].y;
     double a  = abs(x2*y1 - x1*y2)/sqrt((y2-y1)*(y2-y1)+(x1-x2)*(x1-x2));
     double alpha = atan2(-(x2-x1),(y2-y1));
     double theta = atan2(BtoC.y, BtoC.x);
