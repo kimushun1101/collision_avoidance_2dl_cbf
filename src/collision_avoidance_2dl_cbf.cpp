@@ -22,6 +22,8 @@ CollisionAvoidance2dlCBF::CollisionAvoidance2dlCBF() : Node("collision_avoidance
   scan_frame_name_ = this->get_parameter("scan_frame_name").as_string();
   this->declare_parameter("gamma", 1.0);
   gamma_ = this->get_parameter("gamma").as_double();
+  this->declare_parameter("epsilon", 0.001);
+  epsilon_ = this->get_parameter("epsilon").as_double();
 
   using std::placeholders::_1;
   cmd_vel_out_pub_ = this->create_publisher<geometry_msgs::msg::Twist>("cmd_vel_out", 10);
@@ -122,9 +124,7 @@ void CollisionAvoidance2dlCBF::publishAssistInput()
     double alpha = atan2(-(x2-x1),(y2-y1));
     double theta = atan2(BtoC.y, BtoC.x);
     double r_ci = a/cos(theta - alpha);
-    double drc_dtheta = a*tan(theta - alpha)/(cos(theta - alpha));  // ここは0でも良いのでは？プリントする
-    // double r_ci = 0.3;
-    // double drc_dtheta = 0.0;
+    double drc_dtheta = a*tan(theta - alpha)/(cos(theta - alpha));
 
     // step 4: calculate B and LgB
     double L = 0.001;
@@ -151,7 +151,7 @@ void CollisionAvoidance2dlCBF::publishAssistInput()
     u1 = u2 = 0.0;
   }
   // RCLCPP_INFO_STREAM(this->get_logger(), "B, LgB1, LgB2: " << B << ", " << LgB1 << ", " << LgB2);
-  RCLCPP_INFO_STREAM(this->get_logger(), "h, Lgh1, Lgh2: " << h << ", " << Lgh1 << ", " << Lgh2);
+  // RCLCPP_INFO_STREAM(this->get_logger(), "h, Lgh1, Lgh2: " << h << ", " << Lgh1 << ", " << Lgh2);
   // RCLCPP_INFO_STREAM(this->get_logger(), "u: " << u1 << ", " << u2);
   // RCLCPP_INFO_STREAM(this->get_logger(), "u_h: " << u_h1_ << ", " << u_h2_);
   // RCLCPP_INFO_STREAM(this->get_logger(), "u+u_h: " << u1+u_h1_ << ", " << u2 + u_h2_);
