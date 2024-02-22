@@ -172,7 +172,7 @@ void CollisionAvoidance2dlCBF::publishAssistInput()
     LgB2 += dBdx2*(-drc_dtheta);
   }
   // step 5: calculate h, Lgh, I, J, and u
-  double h = 1.0/B -0.001;
+  double h = 1.0/B - epsilon_;
   double Lgh1 = - LgB1 / (B*B);
   double Lgh2 = - LgB2 / (B*B);
   double I = Lgh1*u_h1_ + Lgh2*u_h2_;
