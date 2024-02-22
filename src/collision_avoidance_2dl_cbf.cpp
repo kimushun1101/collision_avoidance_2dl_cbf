@@ -133,7 +133,7 @@ void CollisionAvoidance2dlCBF::publishAssistInput()
     // step 4: calculate B and LgB
     double L = 0.001;
     double ri_rc = r_[i] - r_ci;
-    if (ri_rc < 0.0){
+    if (ri_rc < 0.0) {
       RCLCPP_ERROR_STREAM(this->get_logger(), "r_i - r_ci < 0: " << r_[i] << ", " << r_ci << ", " << theta);
       continue;
     }
@@ -151,7 +151,7 @@ void CollisionAvoidance2dlCBF::publishAssistInput()
   double I = Lgh1*u_h1_ + Lgh2*u_h2_;
   double J = -gamma_*h;
   double u1, u2;
-  if(I < J){
+  if (I < J) {
     double Lgh_sq = Lgh1*Lgh1 + Lgh2*Lgh2;
     u1 = -(I - J) * Lgh1 / Lgh_sq;
     u2 = -(I - J) * Lgh2 / Lgh_sq;
@@ -174,20 +174,20 @@ void CollisionAvoidance2dlCBF::publishAssistInput()
 bool CollisionAvoidance2dlCBF::calculateLineIntersection(const Point& p1, const Point& p2, const Point& p3, const Point& p4, Point& intersection)
 {
   double det = (p1.x - p2.x) * (p4.y - p3.y) - (p4.x - p3.x) * (p1.y - p2.y);
-  if(det == 0.0){
+  if (det == 0.0) {
     RCLCPP_DEBUG_STREAM(this->get_logger(), "det = " << det);
     return false;
   }
   double t = ((p4.y - p3.y) * (p4.x - p2.x) + (p3.x - p4.x) * (p4.y - p2.y)) / det;
   double s = ((p2.y - p1.y) * (p4.x - p2.x) + (p1.x - p2.x) * (p4.y - p2.y)) / det;
 
-  if(0.0 <= t && t <= 1.0 && 0.0 <= s && s <= 1.0){
+  if (0.0 <= t && t <= 1.0 && 0.0 <= s && s <= 1.0) {
     intersection.x = t * p1.x + (1.0 - t) * p2.x;
     intersection.y = t * p1.y + (1.0 - t) * p2.y;
     return true;
   } else {
-    RCLCPP_DEBUG_STREAM(this->get_logger(), "t: " << t);
-    RCLCPP_DEBUG_STREAM(this->get_logger(), "s: " << s);
+    // RCLCPP_DEBUG_STREAM(this->get_logger(), "t: " << t);
+    // RCLCPP_DEBUG_STREAM(this->get_logger(), "s: " << s);
     return false;
   }
 }
@@ -196,7 +196,7 @@ bool CollisionAvoidance2dlCBF::calculatePolygonIntersection(const Point& target,
 {
   Point origin = {0.0, 0.0};
   for (std::size_t i = 0; i < collision_poly_.size()-1; i++) {
-    if (calculateLineIntersection(origin, target, collision_poly_[i], collision_poly_[i+1], intersection)){
+    if (calculateLineIntersection(origin, target, collision_poly_[i], collision_poly_[i+1], intersection)) {
       number = i;
       return true;
     }
