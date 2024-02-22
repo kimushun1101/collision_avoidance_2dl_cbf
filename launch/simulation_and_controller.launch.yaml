@@ -28,14 +28,15 @@ launch:
     exec: "publish_collision_polygon_node"
     param:
     - {name: "base_frame_id", value: "base_link"}
+    - {name: "plot_count", value: 10}
+    # - {name: "robot", value: {x: 0.06, y: 0.0, r: 0.1812}}
     - {name: "robot.x", value: 0.06}
     - {name: "robot.y", value: 0.0}
     - {name: "robot.r", value: 0.1812}
+    # - {name: "user",  value: {x: -0.06, y: -0.17, r: 0.3}}
     - {name: "user.x", value: -0.06}
     - {name: "user.y", value: -0.17}
     - {name: "user.r", value: 0.20}
-    # - {name: "robot", value: {x: 0.06, y: 0.0, r: 0.1812}}
-    # - {name: "user",  value: {x: -0.06, y: -0.17, r: 0.3}}
 
 - node:
     pkg: rviz2

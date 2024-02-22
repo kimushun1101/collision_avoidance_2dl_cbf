@@ -33,9 +33,12 @@ private:
   };
 
   void timer_callback();
+  void publish_circle(const Circle& c, std::size_t plot_count, const rclcpp::Publisher<geometry_msgs::msg::PolygonStamped>::SharedPtr pub);
+  void publish_collision(const Circle& c1, const Circle& c2, std::size_t plot_count, const rclcpp::Publisher<geometry_msgs::msg::PolygonStamped>::SharedPtr pub);
 
   rclcpp::Publisher<geometry_msgs::msg::PolygonStamped>::SharedPtr collision_poly_pub_, robot_poly_pub_, user_poly_pub_;
   rclcpp::TimerBase::SharedPtr timer_;
   std::string base_frame_id_;
+  int plot_count_;
   Circle robot_, user_;
 };
