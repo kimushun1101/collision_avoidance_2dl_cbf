@@ -11,17 +11,18 @@ launch:
     param:
     - {name: "scale", value: 0.5}
 
-# - node:
-#     pkg: "collision_avoidance_2dl_cbf"
-#     exec: "collision_avoidance_2dl_cbf_node"
-#     remap:
-#     - {from: "/scan", to: "/scan"}
-#     - {from: "/cmd_vel_in", to: "/cmd_vel_ref"}
-#     - {from: "/cmd_vel_out", to: "/cmd_vel"}
-#     param:
-#     - {name: "base_frame", value: "base_link"}
-#     - {name: "scan_frame", value: "base_scan"}
-#     - {name: "gamma", value: 0.1}
+- node:
+    pkg: "collision_avoidance_2dl_cbf"
+    exec: "collision_avoidance_2dl_cbf_node"
+    remap:
+    - {from: "/scan", to: "/scan"}
+    - {from: "/cmd_vel_in", to: "/cmd_vel_ref"}
+    - {from: "/cmd_vel_out", to: "/cmd_vel"}
+    param:
+    - {name: "base_frame", value: "base_link"}
+    - {name: "scan_frame", value: "base_scan"}
+    - {name: "gamma", value: 0.1}
+    - {name: "epsilon", value: 0.0005}
 
 - node:
     pkg: "collision_avoidance_2dl_cbf"
