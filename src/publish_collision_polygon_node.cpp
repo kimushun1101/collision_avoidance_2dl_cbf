@@ -24,9 +24,18 @@ public:
   {
     this->declare_parameter("base_frame_id", "base_link");
     base_frame_id_ = this->get_parameter("base_frame_id").as_string();
-    std::vector<double> values = {0.26, 0.085, -0.06, 0.085, -0.06, -0.085, 0.26, -0.085};
-    this->declare_parameter("collision_polygon", values);
-    poly_row_ = this->get_parameter("collision_polygon").as_double_array();
+    this->declare_parameter("robot.x", 0.06);
+    this->declare_parameter("robot.y", 0.0);
+    this->declare_parameter("robot.r", sqrt(0.16*0.16 + 0.085*0.085));
+    this->declare_parameter("user.x", -0.06);
+    this->declare_parameter("user.y", -0.17);
+    this->declare_parameter("user.r", 0.3);
+    robot_.x = this->get_parameter("robot.x").as_double();
+    robot_.y = this->get_parameter("robot.y").as_double();
+    robot_.r = this->get_parameter("robot.r").as_double();
+    user_.x = this->get_parameter("user.x").as_double();
+    user_.y = this->get_parameter("user.y").as_double();
+    user_.r = this->get_parameter("user.r").as_double();
 
     collision_poly_pub_ = this->create_publisher<geometry_msgs::msg::PolygonStamped>("collision_polygon", 10);
     robot_poly_pub_ = this->create_publisher<geometry_msgs::msg::PolygonStamped>("robot_polygon", 10);
@@ -54,22 +63,14 @@ private:
     auto point = geometry_msgs::msg::Point32();
 
     // circle
-    std::size_t p_num = 20;
+    std::size_t p_num = 30;
     double delta = 2*M_PI/(double)p_num;
     double theta = 0.0;
-    Circle robot, user;
-    robot.x = 0.06;
-    robot.y = 0;
-    robot.r = sqrt(0.16*0.16 + 0.085*0.085);
-
-    user.x = -0.06;
-    user.y = -0.17;
-    user.r = 0.30;
 
     double r, offset_x, offset_y;
-    offset_x = robot.x;
-    offset_y = robot.y;
-    r = robot.r;
+    offset_x = robot_.x;
+    offset_y = robot_.y;
+    r = robot_.r;
     for(std::size_t i = 0; i < p_num; i++){
       point.x = r*cos(theta) + offset_x;
       point.y = r*sin(theta) + offset_y;
@@ -80,9 +81,9 @@ private:
     poly.polygon.points.clear();
 
 
-    offset_x = user.x;
-    offset_y = user.y;
-    r = user.r;
+    offset_x = user_.x;
+    offset_y = user_.y;
+    r = user_.r;
     for(std::size_t i = 0; i < p_num; i++){
       point.x = r*cos(theta) + offset_x;
       point.y = r*sin(theta) + offset_y;
@@ -95,23 +96,23 @@ private:
     // tangency
     std::vector<geometry_msgs::msg::Point32> points_of_tangency_(4); 
 
-    double X = user.x - robot.x;
-    double Y = user.y - robot.y;
-    double R = user.r - robot.r;
+    double X = user_.x - robot_.x;
+    double Y = user_.y - robot_.y;
+    double R = user_.r - robot_.r;
     double X2pY2 = X*X+Y*Y;
     double sqX2Y2mR2 = sqrt(X2pY2-R*R);
 
-    points_of_tangency_[0].x = (-X*R*robot.r + Y*robot.r*sqX2Y2mR2)/X2pY2 + robot.x;
-    points_of_tangency_[0].y = (-Y*R*robot.r - X*robot.r*sqX2Y2mR2)/X2pY2 + robot.y;
+    points_of_tangency_[0].x = (-X*R*robot_.r + Y*robot_.r*sqX2Y2mR2)/X2pY2 + robot_.x;
+    points_of_tangency_[0].y = (-Y*R*robot_.r - X*robot_.r*sqX2Y2mR2)/X2pY2 + robot_.y;
 
-    points_of_tangency_[1].x = (-X*R*user.r + Y*user.r*sqX2Y2mR2)/X2pY2 + user.x;
-    points_of_tangency_[1].y = (-Y*R*user.r - X*user.r*sqX2Y2mR2)/X2pY2 + user.y;
+    points_of_tangency_[1].x = (-X*R*user_.r + Y*user_.r*sqX2Y2mR2)/X2pY2 + user_.x;
+    points_of_tangency_[1].y = (-Y*R*user_.r - X*user_.r*sqX2Y2mR2)/X2pY2 + user_.y;
 
-    points_of_tangency_[3].x = (-X*R*robot.r - Y*robot.r*sqX2Y2mR2)/X2pY2 + robot.x;
-    points_of_tangency_[3].y = (-Y*R*robot.r + X*robot.r*sqX2Y2mR2)/X2pY2 + robot.y;
+    points_of_tangency_[2].x = (-X*R*user_.r - Y*user_.r*sqX2Y2mR2)/X2pY2 + user_.x;
+    points_of_tangency_[2].y = (-Y*R*user_.r + X*user_.r*sqX2Y2mR2)/X2pY2 + user_.y;
 
-    points_of_tangency_[2].x = (-X*R*user.r - Y*user.r*sqX2Y2mR2)/X2pY2 + user.x;
-    points_of_tangency_[2].y = (-Y*R*user.r + X*user.r*sqX2Y2mR2)/X2pY2 + user.y;
+    points_of_tangency_[3].x = (-X*R*robot_.r - Y*robot_.r*sqX2Y2mR2)/X2pY2 + robot_.x;
+    points_of_tangency_[3].y = (-Y*R*robot_.r + X*robot_.r*sqX2Y2mR2)/X2pY2 + robot_.y;
 
     points_of_tangency_.push_back(points_of_tangency_[0]);
 
@@ -139,17 +140,17 @@ private:
             distance = a/cos(theta - alpha);
             differential = a*tan(theta - alpha)/(cos(theta - alpha));
           } else if (i == 3){
-            double x0 = robot.x;
-            double y0 = robot.y;
-            double a = robot.r;
+            double x0 = robot_.x;
+            double y0 = robot_.y;
+            double a = robot_.r;
             double r0 = sqrt(x0*x0 + y0*y0);
             double theta0 = atan2(y0,x0);
             distance = sqrt(r0*r0*cos(2*theta - 2*theta0)/2 + a*a - r0*r0/2) + r0*cos(theta-theta0);
             differential = -r0*sin(theta-theta0) - sqrt(2)*r0*r0*sin(2*theta - 2*theta0)/(2*sqrt(r0*r0*cos(2*theta - 2*theta0)+2*a-r0*r0));
           } else if (i == 1){
-            double x0 = user.x;
-            double y0 = user.y;
-            double a = user.r;
+            double x0 = user_.x;
+            double y0 = user_.y;
+            double a = user_.r;
             double r0 = sqrt(x0*x0 + y0*y0);
             double theta0 = atan2(y0, x0);
             distance = sqrt(r0*r0*cos(2*theta - 2*theta0)/2 + a*a - r0*r0/2) + r0*cos(theta-theta0);
@@ -170,7 +171,7 @@ private:
   rclcpp::Publisher<geometry_msgs::msg::PolygonStamped>::SharedPtr collision_poly_pub_, robot_poly_pub_, user_poly_pub_;
   rclcpp::TimerBase::SharedPtr timer_;
   std::string base_frame_id_;
-  std::vector<double> poly_row_;
+  Circle robot_, user_;
 };
 
 int main(int argc, char * argv[])
