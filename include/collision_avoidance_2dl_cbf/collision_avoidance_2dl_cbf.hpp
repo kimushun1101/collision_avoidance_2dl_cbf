@@ -55,7 +55,7 @@ private:
   rclcpp::Subscription<sensor_msgs::msg::LaserScan>::ConstSharedPtr scan_sub_;
   rclcpp::Subscription<geometry_msgs::msg::PolygonStamped>::ConstSharedPtr collision_poly_sub_;
 
-  double gamma_;
+  double gamma_, epsilon_;
   std::string base_frame_name_;
   std::string scan_frame_name_;
   rclcpp::TimerBase::SharedPtr timer_;

@@ -44,21 +44,6 @@ private:
     poly.header.frame_id = base_frame_id_;
   
     auto point = geometry_msgs::msg::Point32();
-    // if (poly_row_.size() <= 6 || poly_row_.size() % 2 != 0) {
-    //   RCLCPP_ERROR(this->get_logger(), "Polygon has incorrect points description");
-    //   return;
-    // }
-    // bool first = true;
-    // // navigation2/nav2_collision_monitor/src/polygon.cpp
-    // for (double val : poly_row_) {
-    //   if (first) {
-    //     point.x = val;
-    //   } else {
-    //     point.y = val;
-    //     poly.polygon.points.push_back(point);
-    //   }
-    //   first = !first;
-    // }
 
 
     std::size_t p_num = 100;
@@ -161,14 +146,60 @@ private:
           (void)differential;
           point.x = distance*cos(theta);
           point.y = distance*sin(theta);
-          // poly.polygon.points.push_back(point);
+          poly.polygon.points.push_back(point);
         }
       }
       theta += delta;
     }
 
+    // polygon
+    // if (poly_row_.size() <= 6 || poly_row_.size() % 2 != 0) {
+    //   RCLCPP_ERROR(this->get_logger(), "Polygon has incorrect points description");
+    //   return;
+    // }
+    // bool first = true;
+    // // navigation2/nav2_collision_monitor/src/polygon.cpp
+    // for (double val : poly_row_) {
+    //   if (first) {
+    //     point.x = val;
+    //   } else {
+    //     point.y = val;
+    //     poly.polygon.points.push_back(point);
+    //   }
+    //   first = !first;
+    // }
+
+    // circle
+    // double r, offset_x, offset_y, delta, theta;
+    // std::size_t p_num = 20;
+
+    // r = 0.3;
+    // offset_x = -0.1;
+    // offset_y = -0.15;
+    // delta = 2*M_PI/(double)p_num;
+    // theta = 0.0;
+    // for(std::size_t i = 0; i < p_num; i++){
+    //   point.x = r*cos(theta) + offset_x;
+    //   point.y = r*sin(theta) + offset_y;
+    //   poly.polygon.points.push_back(point);
+    //   theta += delta;
+    // }
+
+    // r = 0.3;
+    // offset_x = 0.032;
+    // offset_y = 0.0;
+    // delta = 2*M_PI/(double)p_num;
+    // theta = 0.0;
+    // for(std::size_t i = 0; i < p_num; i++){
+    //   point.x = r*cos(theta) + offset_x;
+    //   point.y = r*sin(theta) + offset_y;
+    //   poly.polygon.points.push_back(point);
+    //   theta += delta;
+    // }
+
     collision_poly_pub_->publish(poly);
   }
+
   rclcpp::Publisher<geometry_msgs::msg::PolygonStamped>::SharedPtr collision_poly_pub_;
   rclcpp::TimerBase::SharedPtr timer_;
   std::string base_frame_id_;
