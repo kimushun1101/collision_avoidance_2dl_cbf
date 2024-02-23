@@ -62,7 +62,7 @@ private:
   rclcpp::TimerBase::SharedPtr timer_;
 
   std::vector<Point> collision_poly_;
-  std::vector<double> r_, theta_;
+  std::vector<double> BxP_, ByP_;
   double BxS_, ByS_, BthetaS_;
   float u_h1_, u_h2_;
   bool is_debug_;

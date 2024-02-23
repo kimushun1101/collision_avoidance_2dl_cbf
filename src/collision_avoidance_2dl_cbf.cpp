@@ -78,19 +78,18 @@ void CollisionAvoidance2dlCBF::cmd_vel_inCallback(geometry_msgs::msg::Twist::Con
 
 void CollisionAvoidance2dlCBF::scanCallback(sensor_msgs::msg::LaserScan::ConstSharedPtr msg)
 {
-  r_.resize(msg->ranges.size());
-  theta_.resize(r_.size());
+  std::size_t n = msg->ranges.size();
+  BxP_.resize(n);
+  ByP_.resize(n);
 
   // step 1: calculate r_i and theta_i
-  double SrP, SthetaP, BxP, ByP;
-  for (std::size_t i = 0; i < r_.size(); i++) {
+  double SrP, SthetaP;
+  for (std::size_t i = 0; i < n; i++) {
     SrP = msg->ranges[i];
     if(SrP > msg->range_max) SrP = msg->range_max;
     SthetaP = msg->angle_min + i * msg->angle_increment;
-    BxP = SrP * cos(SthetaP + BthetaS_) + BxS_;
-    ByP = SrP * sin(SthetaP + BthetaS_) + ByS_;
-    r_[i] = sqrt(BxP*BxP + ByP*ByP);
-    theta_[i] = atan2(ByP, BxP);
+    BxP_[i] = SrP * cos(SthetaP + BthetaS_) + BxS_;
+    ByP_[i] = SrP * sin(SthetaP + BthetaS_) + ByS_;
   }
   publishAssistInput();
 }
@@ -109,16 +108,16 @@ void CollisionAvoidance2dlCBF::collision_polygonCallback(geometry_msgs::msg::Pol
 
 void CollisionAvoidance2dlCBF::publishAssistInput()
 {
-  if (collision_poly_.size() < 2 || r_.size() == 0)
+  if (collision_poly_.size() < 2 || BxP_.size() == 0)
     return;
 
   double B, LgB1, LgB2;
   B = LgB1 = LgB2 = 0;
-  for (std::size_t i = 0; i < r_.size(); i++) {
+  for (std::size_t i = 0; i < BxP_.size(); i++) {
     // step 2: calculate BxC and ByC
     Point BtoP;
-    BtoP.x = r_[i]*cos(theta_[i]);
-    BtoP.y = r_[i]*sin(theta_[i]);
+    BtoP.x = BxP_[i];
+    BtoP.y = ByP_[i];
     Point BtoC;
     std::size_t poly_num;
     if (!calculatePolygonIntersection(BtoP, BtoC, poly_num))
@@ -131,22 +130,23 @@ void CollisionAvoidance2dlCBF::publishAssistInput()
     double y2 = collision_poly_[poly_num+1].y;
     double a  = abs(x2*y1 - x1*y2)/sqrt((y2-y1)*(y2-y1)+(x1-x2)*(x1-x2));
     double alpha = atan2(-(x2-x1),(y2-y1));
-    double theta = atan2(BtoC.y, BtoC.x);
-    double r_ci = a/cos(theta - alpha);
-    double drc_dtheta = a*tan(theta - alpha)/(cos(theta - alpha));
+    double theta_i = atan2(BtoC.y, BtoC.x);
+    double r_ci = a/cos(theta_i - alpha);
+    double drc_dtheta = a*tan(theta_i - alpha)/(cos(theta_i - alpha));
 
     // step 4: calculate B and LgB
     double L = 0.001;
-    double ri_rc = r_[i] - r_ci;
+    double r_i = sqrt(BxP_[i]*BxP_[i] + ByP_[i]*ByP_[i]);
+    double ri_rc = r_i - r_ci;
     if (ri_rc < 0.0) {
-      RCLCPP_ERROR_STREAM(this->get_logger(), "r_i - r_ci < 0: " << r_[i] << ", " << r_ci << ", " << theta);
+      RCLCPP_ERROR_STREAM(this->get_logger(), "r_i - r_ci < 0: " << r_i << ", " << r_ci << ", " << theta_i);
       continue;
     }
     double ri_rc_sq = ri_rc * ri_rc;
-    B += 1.0/ri_rc + L*(r_[i]*r_[i] + r_ci*r_ci);
-    double dBdx1 = -1.0/ri_rc_sq + 2.0*L*r_[i];
+    B += 1.0/ri_rc + L*(r_i*r_i + r_ci*r_ci);
+    double dBdx1 = -1.0/ri_rc_sq + 2.0*L*r_i;
     double dBdx2 = +1.0/ri_rc_sq + 2.0*L*r_ci;
-    LgB1 += dBdx1*(-cos(theta_[i]+BthetaS_)) + dBdx2*(-sqrt(BxS_*BxS_+ByS_*ByS_)*sin(theta_[1]));
+    LgB1 += dBdx1*(-cos(theta_i+BthetaS_)) + dBdx2*(-sqrt(BxS_*BxS_+ByS_*ByS_)*sin(theta_i));
     LgB2 += dBdx2*(-drc_dtheta);
   }
   // step 5: calculate h, Lgh, I, J, and u
