@@ -190,7 +190,7 @@ bool CollisionAvoidance2dlCBF::summationCBFs(const std::vector<Point> BtoP, doub
     B += 1.0/ri_rc + L*(r_i*r_i + r_ci*r_ci);
     double dBdx1 = -1.0/ri_rc_sq + 2.0*L*r_i;
     double dBdx2 = +1.0/ri_rc_sq + 2.0*L*r_ci;
-    LgB1 += dBdx1*(-cos(theta_i+BthetaS_)) + dBdx2*(-sqrt(BtoS_.x*BtoS_.x+BtoS_.y*BtoS_.y)*sin(theta_i));
+    LgB1 += dBdx1*(-cos(theta_i));
     LgB2 += dBdx2*(-drc_dtheta);
   }
   return collision_check;
