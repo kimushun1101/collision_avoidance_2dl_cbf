@@ -47,14 +47,14 @@ CollisionAvoidance2dlCBF::CollisionAvoidance2dlCBF() : Node("collision_avoidance
   while (true) {
     try {
       t = tf_buffer_->lookupTransform(base_frame_name_, scan_frame_name_, tf2::TimePointZero);
-      BxS_ = t.transform.translation.x;
-      ByS_ = t.transform.translation.y;
+      BtoS_.x = t.transform.translation.x;
+      BtoS_.y = t.transform.translation.y;
       auto q0 = t.transform.rotation.w;
       auto q1 = t.transform.rotation.x;
       auto q2 = t.transform.rotation.y;
       auto q3 = t.transform.rotation.z;
       BthetaS_ = atan2(2.0 * (q1*q2 + q0*q3), q0*q0 + q1*q1 - q2*q2 - q3*q3);
-      RCLCPP_INFO_STREAM(this->get_logger(), "[x, y, yaw] : " << BxS_ << ", " << ByS_ << ", " << BthetaS_);
+      RCLCPP_INFO_STREAM(this->get_logger(), "[x, y, yaw] : " << BtoS_.x << ", " << BtoS_.y << ", " << BthetaS_);
       break;
     } catch (const tf2::TransformException & ex) {
       RCLCPP_WARN(this->get_logger(), "Could not transform %s to %s: %s", base_frame_name_.c_str(), scan_frame_name_.c_str(), ex.what());
@@ -87,8 +87,8 @@ void CollisionAvoidance2dlCBF::scanCallback(sensor_msgs::msg::LaserScan::ConstSh
     SrP = msg->ranges[i];
     if(SrP > msg->range_max) SrP = msg->range_max;
     SthetaP = msg->angle_min + i * msg->angle_increment;
-    BtoP_[i].x = SrP * cos(SthetaP + BthetaS_) + BxS_;
-    BtoP_[i].y = SrP * sin(SthetaP + BthetaS_) + ByS_;
+    BtoP_[i].x = SrP * cos(SthetaP + BthetaS_) + BtoS_.x;
+    BtoP_[i].y = SrP * sin(SthetaP + BthetaS_) + BtoS_.y;
   }
   publishAssistInput();
 }
@@ -142,7 +142,7 @@ void CollisionAvoidance2dlCBF::publishAssistInput()
     B += 1.0/ri_rc + L*(r_i*r_i + r_ci*r_ci);
     double dBdx1 = -1.0/ri_rc_sq + 2.0*L*r_i;
     double dBdx2 = +1.0/ri_rc_sq + 2.0*L*r_ci;
-    LgB1 += dBdx1*(-cos(theta_i+BthetaS_)) + dBdx2*(-sqrt(BxS_*BxS_+ByS_*ByS_)*sin(theta_i));
+    LgB1 += dBdx1*(-cos(theta_i+BthetaS_)) + dBdx2*(-sqrt(BtoS_.x*BtoS_.x+BtoS_.y*BtoS_.y)*sin(theta_i));
     LgB2 += dBdx2*(-drc_dtheta);
   }
   // step 5: calculate h, Lgh, I, J, and u
