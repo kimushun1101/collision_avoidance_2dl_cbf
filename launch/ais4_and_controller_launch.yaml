@@ -1,7 +1,7 @@
 launch:
 
 - include:
-    file: "$(find-pkg-share collision_avoidance_2dl_cbf)/launch/ais4_sim_launch.yaml"
+    file: "$(find-pkg-share ais_launch)/launch/include/ais4_sim_launch.yaml"
 
 # - node:
 #     pkg: "mouse_teleop"
