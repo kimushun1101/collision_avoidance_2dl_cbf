@@ -79,8 +79,7 @@ void CollisionAvoidance2dlCBF::cmd_vel_inCallback(geometry_msgs::msg::Twist::Con
 void CollisionAvoidance2dlCBF::scanCallback(sensor_msgs::msg::LaserScan::ConstSharedPtr msg)
 {
   std::size_t n = msg->ranges.size();
-  BxP_.resize(n);
-  ByP_.resize(n);
+  BtoP_.resize(n);
 
   // step 1: calculate r_i and theta_i
   double SrP, SthetaP;
@@ -88,8 +87,8 @@ void CollisionAvoidance2dlCBF::scanCallback(sensor_msgs::msg::LaserScan::ConstSh
     SrP = msg->ranges[i];
     if(SrP > msg->range_max) SrP = msg->range_max;
     SthetaP = msg->angle_min + i * msg->angle_increment;
-    BxP_[i] = SrP * cos(SthetaP + BthetaS_) + BxS_;
-    ByP_[i] = SrP * sin(SthetaP + BthetaS_) + ByS_;
+    BtoP_[i].x = SrP * cos(SthetaP + BthetaS_) + BxS_;
+    BtoP_[i].y = SrP * sin(SthetaP + BthetaS_) + ByS_;
   }
   publishAssistInput();
 }
@@ -108,19 +107,16 @@ void CollisionAvoidance2dlCBF::collision_polygonCallback(geometry_msgs::msg::Pol
 
 void CollisionAvoidance2dlCBF::publishAssistInput()
 {
-  if (collision_poly_.size() < 2 || BxP_.size() == 0)
+  if (collision_poly_.size() < 2 || BtoP_.size() == 0)
     return;
 
   double B, LgB1, LgB2;
   B = LgB1 = LgB2 = 0;
-  for (std::size_t i = 0; i < BxP_.size(); i++) {
+  for (std::size_t i = 0; i < BtoP_.size(); i++) {
     // step 2: calculate BxC and ByC
-    Point BtoP;
-    BtoP.x = BxP_[i];
-    BtoP.y = ByP_[i];
     Point BtoC;
     std::size_t poly_num;
-    if (!calculatePolygonIntersection(BtoP, BtoC, poly_num))
+    if (!calculatePolygonIntersection(BtoP_[i], BtoC, poly_num))
       continue;
 
     // step 3: calculate r_ci and drc_dtheta
@@ -136,7 +132,7 @@ void CollisionAvoidance2dlCBF::publishAssistInput()
 
     // step 4: calculate B and LgB
     double L = 0.001;
-    double r_i = sqrt(BxP_[i]*BxP_[i] + ByP_[i]*ByP_[i]);
+    double r_i = sqrt(BtoP_[i].x*BtoP_[i].x + BtoP_[i].y*BtoP_[i].y);
     double ri_rc = r_i - r_ci;
     if (ri_rc < 0.0) {
       RCLCPP_ERROR_STREAM(this->get_logger(), "r_i - r_ci < 0: " << r_i << ", " << r_ci << ", " << theta_i);
