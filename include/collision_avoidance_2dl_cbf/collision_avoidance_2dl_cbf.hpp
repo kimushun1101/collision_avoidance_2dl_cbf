@@ -47,6 +47,7 @@ private:
   void scanCallback(sensor_msgs::msg::LaserScan::ConstSharedPtr msg);
   void collision_polygonCallback(geometry_msgs::msg::PolygonStamped::ConstSharedPtr msg);
   void publishAssistInput();
+  bool summationCBFs(const std::vector<Point> BtoP_, double& B, double& LgB1, double& LgB2);
   bool calculateLineIntersection(const Point& p1, const Point& p2, const Point& p3, const Point& p4, Point& intersection);
   bool calculatePolygonIntersection(const Point& target, Point& intersection, std::size_t& number);
 

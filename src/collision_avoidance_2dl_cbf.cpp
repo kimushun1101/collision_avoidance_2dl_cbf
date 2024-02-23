@@ -112,40 +112,7 @@ void CollisionAvoidance2dlCBF::publishAssistInput()
 
   double B, LgB1, LgB2;
   B = LgB1 = LgB2 = 0;
-  for (std::size_t i = 0; i < BtoP_.size(); i++) {
-    // step 2: calculate BxC and ByC
-    Point BtoC;
-    std::size_t poly_num;
-    if (!calculatePolygonIntersection(BtoP_[i], BtoC, poly_num))
-      continue;
-
-    // step 3: calculate r_ci and drc_dtheta
-    double x1 = collision_poly_[poly_num].x;
-    double y1 = collision_poly_[poly_num].y;
-    double x2 = collision_poly_[poly_num+1].x;
-    double y2 = collision_poly_[poly_num+1].y;
-    double a  = abs(x2*y1 - x1*y2)/sqrt((y2-y1)*(y2-y1)+(x1-x2)*(x1-x2));
-    double alpha = atan2(-(x2-x1),(y2-y1));
-    double theta_i = atan2(BtoC.y, BtoC.x);
-    double r_ci = a/cos(theta_i - alpha);
-    double drc_dtheta = a*tan(theta_i - alpha)/(cos(theta_i - alpha));
-
-    // step 4: calculate B and LgB
-    double L = 0.001;
-    double r_i = sqrt(BtoP_[i].x*BtoP_[i].x + BtoP_[i].y*BtoP_[i].y);
-    double ri_rc = r_i - r_ci;
-    if (ri_rc < 0.0) {
-      RCLCPP_ERROR_STREAM(this->get_logger(), "r_i - r_ci < 0: " << r_i << ", " << r_ci << ", " << theta_i);
-      continue;
-    }
-    double ri_rc_sq = ri_rc * ri_rc;
-    B += 1.0/ri_rc + L*(r_i*r_i + r_ci*r_ci);
-    double dBdx1 = -1.0/ri_rc_sq + 2.0*L*r_i;
-    double dBdx2 = +1.0/ri_rc_sq + 2.0*L*r_ci;
-    LgB1 += dBdx1*(-cos(theta_i+BthetaS_)) + dBdx2*(-sqrt(BtoS_.x*BtoS_.x+BtoS_.y*BtoS_.y)*sin(theta_i));
-    LgB2 += dBdx2*(-drc_dtheta);
-  }
-  // step 5: calculate h, Lgh, I, J, and u
+  bool is_collision = summationCBFs(BtoP_, B, LgB1, LgB2);
   double h = 1.0/B;
   double Lgh1 = - LgB1 / (B*B);
   double Lgh2 = - LgB2 / (B*B);
@@ -165,6 +132,10 @@ void CollisionAvoidance2dlCBF::publishAssistInput()
   msg.angular.z = u2 + u_h2_;
   cmd_vel_out_pub_->publish(msg);
 
+  if (is_collision) {
+    RCLCPP_WARN_STREAM(this->get_logger(), "Set a larger epsilon. [epsilon, h]: [" << epsilon_ << ", " << h << "]");
+  }
+
   if (is_debug_) {
     // RCLCPP_INFO_STREAM(this->get_logger(), "B, LgB1, LgB2: " << B << ", " << LgB1 << ", " << LgB2);
     // RCLCPP_INFO_STREAM(this->get_logger(), "h, Lgh1, Lgh2: " << h << ", " << Lgh1 << ", " << Lgh2);
@@ -179,6 +150,52 @@ void CollisionAvoidance2dlCBF::publishAssistInput()
     debug_pub_->publish(debug_msg);
   }
 }
+
+bool CollisionAvoidance2dlCBF::summationCBFs(const std::vector<Point> BtoP, double& B, double& LgB1, double& LgB2)
+{
+  bool collision_check = false;
+  for (std::size_t i = 0; i < BtoP.size(); i++) {
+    // step 1: calculate r_i
+    double r_i = sqrt(BtoP[i].x*BtoP[i].x + BtoP[i].y*BtoP[i].y);
+    double theta_i = atan2(BtoP[i].y, BtoP[i].x);
+
+    // step 2: calculate BtoC
+    Point BtoC;
+    std::size_t poly_num;
+    if (!calculatePolygonIntersection(BtoP[i], BtoC, poly_num)) {
+      RCLCPP_ERROR(this->get_logger(), "Something is wrong with the polygon settings.");
+      RCLCPP_ERROR_STREAM(this->get_logger(), "r_i, theta_i : " << r_i << ", " << theta_i);
+      continue;
+    }
+
+    // step 3: calculate r_ci and drc_dtheta
+    double x1 = collision_poly_[poly_num].x;
+    double y1 = collision_poly_[poly_num].y;
+    double x2 = collision_poly_[poly_num+1].x;
+    double y2 = collision_poly_[poly_num+1].y;
+    double a  = abs(x2*y1 - x1*y2)/sqrt((y2-y1)*(y2-y1)+(x1-x2)*(x1-x2));
+    double alpha = atan2(-(x2-x1),(y2-y1));
+    double r_ci = a/cos(theta_i - alpha);
+    double drc_dtheta = a*tan(theta_i - alpha)/(cos(theta_i - alpha));
+
+    // step 4: calculate B and LgB
+    double L = 0.001;
+    double ri_rc = r_i - r_ci;
+    if (ri_rc < 0.0) {
+      RCLCPP_ERROR_STREAM(this->get_logger(), "r_i - r_ci < 0: " << r_i << ", " << r_ci << ", " << theta_i);
+      collision_check = true;
+      continue;
+    }
+    double ri_rc_sq = ri_rc * ri_rc;
+    B += 1.0/ri_rc + L*(r_i*r_i + r_ci*r_ci);
+    double dBdx1 = -1.0/ri_rc_sq + 2.0*L*r_i;
+    double dBdx2 = +1.0/ri_rc_sq + 2.0*L*r_ci;
+    LgB1 += dBdx1*(-cos(theta_i+BthetaS_)) + dBdx2*(-sqrt(BtoS_.x*BtoS_.x+BtoS_.y*BtoS_.y)*sin(theta_i));
+    LgB2 += dBdx2*(-drc_dtheta);
+  }
+  return collision_check;
+}
+
 
 bool CollisionAvoidance2dlCBF::calculateLineIntersection(const Point& p1, const Point& p2, const Point& p3, const Point& p4, Point& intersection)
 {
