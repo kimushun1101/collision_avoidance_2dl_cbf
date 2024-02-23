@@ -20,7 +20,7 @@ launch:
     - {from: "/cmd_vel_out", to: "/cmd_vel"}
     param:
     - {name: "base_frame", value: "base_link"}
-    - {name: "scan_frame", value: "base_scan"}
+    - {name: "scan_topic_names", value: ["scan"]}
     - {name: "gamma", value: 1.0}
     - {name: "epsilon", value: 0.0005}
     - {name: "is_debug", value: true}
