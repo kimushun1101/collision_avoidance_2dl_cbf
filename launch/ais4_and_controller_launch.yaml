@@ -17,7 +17,7 @@ launch:
     remap:
     - {from: "/scan", to: "/scan"}
     - {from: "/cmd_vel_in", to: "/cmd_vel_ref"}
-    - {from: "/cmd_vel_out", to: "/cmd_vel"}
+    - {from: "/cmd_vel_out", to: "/suitcase/cmd_vel"}
     param:
     - {name: "base_frame", value: "base_link"}
     - {name: "scan_frame", value: "base_scan"}

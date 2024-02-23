@@ -89,8 +89,8 @@ void CollisionAvoidance2dlCBF::scanCallback(sensor_msgs::msg::LaserScan::ConstSh
     SrP = msg->ranges[i];
     if(SrP > msg->range_max) SrP = msg->range_max;
     SthetaP = msg->angle_min + i * msg->angle_increment;
-    lidar_[scan_frame_name].BtoP[i].x = SrP * cos(SthetaP + BthetaS_) + BtoS_.x;
-    lidar_[scan_frame_name].BtoP[i].y = SrP * sin(SthetaP + BthetaS_) + BtoS_.y;
+    lidar_[scan_frame_name].BtoP[i].x = SrP * cos(SthetaP + lidar_[scan_frame_name].BthetaS) + lidar_[scan_frame_name].BtoS.x;
+    lidar_[scan_frame_name].BtoP[i].y = SrP * sin(SthetaP + lidar_[scan_frame_name].BthetaS) + lidar_[scan_frame_name].BtoS.y;
   }
   publishAssistInput();
 }
