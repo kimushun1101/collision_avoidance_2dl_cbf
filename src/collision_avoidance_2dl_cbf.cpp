@@ -24,6 +24,8 @@ CollisionAvoidance2dlCBF::CollisionAvoidance2dlCBF() : Node("collision_avoidance
   gamma_ = this->get_parameter("gamma").as_double();
   this->declare_parameter("epsilon", 0.001);
   epsilon_ = this->get_parameter("epsilon").as_double();
+  this->declare_parameter("is_debug", false);
+  is_debug_ = this->get_parameter("is_debug").as_bool();
 
   using std::placeholders::_1;
   cmd_vel_out_pub_ = this->create_publisher<geometry_msgs::msg::Twist>("cmd_vel_out", 10);
@@ -33,6 +35,9 @@ CollisionAvoidance2dlCBF::CollisionAvoidance2dlCBF() : Node("collision_avoidance
     "cmd_vel_in", 1, std::bind(&CollisionAvoidance2dlCBF::cmd_vel_inCallback, this, _1));
   collision_poly_sub_ = this->create_subscription<geometry_msgs::msg::PolygonStamped>(
     "collision_polygon", 1, std::bind(&CollisionAvoidance2dlCBF::collision_polygonCallback, this, _1));
+
+  if(is_debug_)
+    debug_pub_ = this->create_publisher<std_msgs::msg::Float64MultiArray>("cbf_debug", 10);
 
   std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
   std::shared_ptr<tf2_ros::TransformListener> tf_listener_{nullptr};
@@ -145,11 +150,11 @@ void CollisionAvoidance2dlCBF::publishAssistInput()
     LgB2 += dBdx2*(-drc_dtheta);
   }
   // step 5: calculate h, Lgh, I, J, and u
-  double h = 1.0/B - epsilon_;
+  double h = 1.0/B;
   double Lgh1 = - LgB1 / (B*B);
   double Lgh2 = - LgB2 / (B*B);
   double I = Lgh1*u_h1_ + Lgh2*u_h2_;
-  double J = -gamma_*h;
+  double J = -gamma_*(h - epsilon_);
   double u1, u2;
   if (I < J) {
     double Lgh_sq = Lgh1*Lgh1 + Lgh2*Lgh2;
@@ -158,17 +163,25 @@ void CollisionAvoidance2dlCBF::publishAssistInput()
   } else {
     u1 = u2 = 0.0;
   }
-  // RCLCPP_INFO_STREAM(this->get_logger(), "B, LgB1, LgB2: " << B << ", " << LgB1 << ", " << LgB2);
-  // RCLCPP_INFO_STREAM(this->get_logger(), "h, Lgh1, Lgh2: " << h << ", " << Lgh1 << ", " << Lgh2);
-  // RCLCPP_INFO_STREAM(this->get_logger(), "u: " << u1 << ", " << u2);
-  // RCLCPP_INFO_STREAM(this->get_logger(), "u_h: " << u_h1_ << ", " << u_h2_);
-  // RCLCPP_INFO_STREAM(this->get_logger(), "u+u_h: " << u1+u_h1_ << ", " << u2 + u_h2_);
-  // RCLCPP_INFO_STREAM(this->get_logger(), "I, J, I - J: " << I << ", " << J << ", " << (I - J));
 
   auto msg = geometry_msgs::msg::Twist();
   msg.linear.x = u1 + u_h1_;
   msg.angular.z = u2 + u_h2_;
   cmd_vel_out_pub_->publish(msg);
+
+  if (is_debug_) {
+    // RCLCPP_INFO_STREAM(this->get_logger(), "B, LgB1, LgB2: " << B << ", " << LgB1 << ", " << LgB2);
+    // RCLCPP_INFO_STREAM(this->get_logger(), "h, Lgh1, Lgh2: " << h << ", " << Lgh1 << ", " << Lgh2);
+    // RCLCPP_INFO_STREAM(this->get_logger(), "u: " << u1 << ", " << u2);
+    // RCLCPP_INFO_STREAM(this->get_logger(), "u_h: " << u_h1_ << ", " << u_h2_);
+    // RCLCPP_INFO_STREAM(this->get_logger(), "u+u_h: " << u1+u_h1_ << ", " << u2 + u_h2_);
+    // RCLCPP_INFO_STREAM(this->get_logger(), "I, J, I - J: " << I << ", " << J << ", " << (I - J));
+    auto debug_msg = std_msgs::msg::Float64MultiArray();
+    debug_msg.data.push_back(h);
+    debug_msg.data.push_back(I);
+    debug_msg.data.push_back(J);
+    debug_pub_->publish(debug_msg);
+  }
 }
 
 bool CollisionAvoidance2dlCBF::calculateLineIntersection(const Point& p1, const Point& p2, const Point& p3, const Point& p4, Point& intersection)
@@ -203,4 +216,3 @@ bool CollisionAvoidance2dlCBF::calculatePolygonIntersection(const Point& target,
   }
   return false;
 }
-

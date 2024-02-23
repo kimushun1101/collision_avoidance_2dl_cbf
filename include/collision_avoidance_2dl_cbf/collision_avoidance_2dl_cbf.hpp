@@ -18,6 +18,7 @@
 #include <geometry_msgs/msg/twist.hpp>
 #include <geometry_msgs/msg/polygon_stamped.hpp>
 #include <sensor_msgs/msg/laser_scan.hpp>
+#include <std_msgs/msg/float64_multi_array.hpp>
 #include <tf2/exceptions.h>
 #include <tf2_ros/transform_listener.h>
 #include <tf2_ros/buffer.h>
@@ -50,6 +51,7 @@ private:
   bool calculatePolygonIntersection(const Point& target, Point& intersection, std::size_t& number);
 
   rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_out_pub_;
+  rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr debug_pub_;
   rclcpp::Subscription<geometry_msgs::msg::Twist>::ConstSharedPtr cmd_vel_in_sub_;
   rclcpp::Subscription<sensor_msgs::msg::LaserScan>::ConstSharedPtr scan_sub_;
   rclcpp::Subscription<geometry_msgs::msg::PolygonStamped>::ConstSharedPtr collision_poly_sub_;
@@ -59,10 +61,9 @@ private:
   std::string scan_frame_name_;
   rclcpp::TimerBase::SharedPtr timer_;
 
-  std::mutex ctrl_mutex_;
-
   std::vector<Point> collision_poly_;
   std::vector<double> r_, theta_;
   double BxS_, ByS_, BthetaS_;
   float u_h1_, u_h2_;
+  bool is_debug_;
 };
