@@ -30,6 +30,7 @@
 #include <iostream>
 #include <fstream>
 #include <float.h>
+#include <map> 
 
 class CollisionAvoidance2dlCBF : public rclcpp::Node
 {
@@ -41,6 +42,12 @@ private:
   struct Point {
     double x;
     double y;
+  };
+
+  struct Scan {
+    Point BtoS;
+    double BthetaS;
+    std::vector<Point> BtoP;
   };
 
   void cmd_vel_inCallback(geometry_msgs::msg::Twist::ConstSharedPtr msg);
@@ -60,9 +67,9 @@ private:
   double gamma_, epsilon_;
   std::string base_frame_name_;
   std::string scan_frame_name_;
-  rclcpp::TimerBase::SharedPtr timer_;
 
   std::vector<Point> collision_poly_, BtoP_;
+  std::map<std::string, Scan> lidar_;
   Point BtoS_;
   double BthetaS_;
   float u_h1_, u_h2_;
