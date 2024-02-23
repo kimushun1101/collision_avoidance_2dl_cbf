@@ -61,7 +61,7 @@ private:
   rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_out_pub_;
   rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr debug_pub_;
   rclcpp::Subscription<geometry_msgs::msg::Twist>::ConstSharedPtr cmd_vel_in_sub_;
-  rclcpp::Subscription<sensor_msgs::msg::LaserScan>::ConstSharedPtr scan_sub_;
+  std::vector<rclcpp::Subscription<sensor_msgs::msg::LaserScan>::ConstSharedPtr> scan_subs_;
   rclcpp::Subscription<geometry_msgs::msg::PolygonStamped>::ConstSharedPtr collision_poly_sub_;
 
   double gamma_, epsilon_;
@@ -70,6 +70,7 @@ private:
 
   std::vector<Point> collision_poly_, BtoP_;
   std::map<std::string, Scan> lidar_;
+  std::vector<std::string> scan_topic_names_;
   float u_h1_, u_h2_;
   bool is_debug_;
 };

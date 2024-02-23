@@ -18,8 +18,10 @@ CollisionAvoidance2dlCBF::CollisionAvoidance2dlCBF() : Node("collision_avoidance
 {
   this->declare_parameter("base_frame_name", "base_link");
   base_frame_name_ = this->get_parameter("base_frame_name").as_string();
-  this->declare_parameter("scan_frame_name", "base_scan");
-  scan_frame_name_ = this->get_parameter("scan_frame_name").as_string();
+  std::vector<std::string> v{"scan"};
+  this->declare_parameter("scan_topic_names", v);
+  scan_topic_names_ = this->get_parameter("scan_topic_names").as_string_array();
+  scan_subs_.resize(scan_topic_names_.size());
   this->declare_parameter("gamma", 1.0);
   gamma_ = this->get_parameter("gamma").as_double();
   this->declare_parameter("epsilon", 0.001);
@@ -29,8 +31,10 @@ CollisionAvoidance2dlCBF::CollisionAvoidance2dlCBF() : Node("collision_avoidance
 
   using std::placeholders::_1;
   cmd_vel_out_pub_ = this->create_publisher<geometry_msgs::msg::Twist>("cmd_vel_out", 10);
-  scan_sub_ = this->create_subscription<sensor_msgs::msg::LaserScan>(
-    "scan", rclcpp::SensorDataQoS(), std::bind(&CollisionAvoidance2dlCBF::scanCallback, this, _1));
+  for (std::size_t i = 0; i < scan_topic_names_.size(); i++) {
+    scan_subs_[i] = this->create_subscription<sensor_msgs::msg::LaserScan>(
+      scan_topic_names_[i], rclcpp::SensorDataQoS(), std::bind(&CollisionAvoidance2dlCBF::scanCallback, this, _1));
+  }
   cmd_vel_in_sub_ = this->create_subscription<geometry_msgs::msg::Twist>(
     "cmd_vel_in", 1, std::bind(&CollisionAvoidance2dlCBF::cmd_vel_inCallback, this, _1));
   collision_poly_sub_ = this->create_subscription<geometry_msgs::msg::PolygonStamped>(
