@@ -1,0 +1,48 @@
+launch:
+
+- include:
+    file: "$(find-pkg-share collision_avoidance_2dl_cbf)/launch/ais4_sim_launch.yaml"
+
+# - node:
+#     pkg: "mouse_teleop"
+#     exec: "mouse_teleop"
+#     remap:
+#     - {from: "mouse_vel", to: "cmd_vel_ref"}
+#     param:
+#     - {name: "scale", value: 0.5}
+
+- node:
+    pkg: "collision_avoidance_2dl_cbf"
+    exec: "collision_avoidance_2dl_cbf_node"
+    remap:
+    - {from: "/scan", to: "/scan"}
+    - {from: "/cmd_vel_in", to: "/cmd_vel_ref"}
+    - {from: "/cmd_vel_out", to: "/cmd_vel"}
+    param:
+    - {name: "base_frame", value: "base_link"}
+    - {name: "scan_frame", value: "base_scan"}
+    - {name: "gamma", value: 1.0}
+    - {name: "epsilon", value: 0.0005}
+    - {name: "is_debug", value: true}
+
+- node:
+    pkg: "collision_avoidance_2dl_cbf"
+    exec: "publish_collision_polygon_node"
+    param:
+    - {name: "base_frame_id", value: "base_link"}
+    - {name: "plot_count", value: 100}
+    # - {name: "robot", value: {x: 0.06, y: 0.0, r: 0.1812}}
+    - {name: "robot.x", value: -0.12}
+    - {name: "robot.y", value: 0.0}
+    - {name: "robot.r", value: 0.35}
+    # - {name: "user",  value: {x: -0.06, y: -0.17, r: 0.3}}
+    - {name: "user.x", value: -0.2}
+    - {name: "user.y", value: -0.3}
+    - {name: "user.r", value: 0.4}
+
+- node:
+    pkg: rviz2
+    exec: rviz2
+    args: "-d $(find-pkg-share collision_avoidance_2dl_cbf)/config/ais4.rviz"
+    param:
+    - {name: "use_sim_time", value: true}
