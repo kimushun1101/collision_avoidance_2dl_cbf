@@ -66,10 +66,9 @@ void CollisionAvoidance2dlCBF::scanCallback(sensor_msgs::msg::LaserScan::ConstSh
   auto scan_frame_name = msg->header.frame_id;
   auto itr = lidar_.find(scan_frame_name);
   if (itr == lidar_.end()) {
-    geometry_msgs::msg::TransformStamped t;
     while (true) {
       try {
-        t = tf_buffer_->lookupTransform(base_frame_name_, scan_frame_name, tf2::TimePointZero);
+        geometry_msgs::msg::TransformStamped t = tf_buffer_->lookupTransform(base_frame_name_, scan_frame_name, tf2::TimePointZero);
         lidar_[scan_frame_name].BtoS.x = t.transform.translation.x;
         lidar_[scan_frame_name].BtoS.y = t.transform.translation.y;
         double q0, q1, q2, q3;
@@ -155,6 +154,15 @@ void CollisionAvoidance2dlCBF::publishAssistInput()
     debug_msg.data.push_back(J);
     debug_msg.data.push_back(gamma_);
     debug_msg.data.push_back(epsilon_);
+    try {
+      geometry_msgs::msg::TransformStamped t = tf_buffer_->lookupTransform("map", "base_link", tf2::TimePointZero);
+      double q0, q1, q2, q3;
+      q0 = t.transform.rotation.w; q1 = t.transform.rotation.x; q2 = t.transform.rotation.y; q3 = t.transform.rotation.z;
+      debug_msg.data.push_back(t.transform.translation.x);
+      debug_msg.data.push_back(t.transform.translation.y);
+      debug_msg.data.push_back(atan2(2.0 * (q1*q2 + q0*q3), q0*q0 + q1*q1 - q2*q2 - q3*q3));
+    } catch (const tf2::TransformException & ex) {
+    }
     debug_pub_->publish(debug_msg);
   }
 }
