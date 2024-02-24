@@ -32,7 +32,7 @@ class PublishUrefSample : public rclcpp::Node
         } else if (t < 30) {
           u_ref_1 = -0.5;
           u_ref_2 = 0.0;
-        } else if (t < 50) {
+        } else if (t < 40) {
           u_ref_1 = 0.5;
           u_ref_2 = 0.2;
         } else {

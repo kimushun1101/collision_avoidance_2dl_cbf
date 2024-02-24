@@ -40,6 +40,9 @@ CollisionAvoidance2dlCBF::CollisionAvoidance2dlCBF() : Node("collision_avoidance
   collision_poly_sub_ = this->create_subscription<geometry_msgs::msg::PolygonStamped>(
     "collision_polygon", 1, std::bind(&CollisionAvoidance2dlCBF::collision_polygonCallback, this, _1));
 
+  tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
+  tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
+
   if(is_debug_)
     debug_pub_ = this->create_publisher<std_msgs::msg::Float64MultiArray>("cbf_debug", 10);
 
@@ -63,20 +66,14 @@ void CollisionAvoidance2dlCBF::scanCallback(sensor_msgs::msg::LaserScan::ConstSh
   auto scan_frame_name = msg->header.frame_id;
   auto itr = lidar_.find(scan_frame_name);
   if (itr == lidar_.end()) {
-    std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
-    std::shared_ptr<tf2_ros::TransformListener> tf_listener_{nullptr};
-    tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
-    tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
     geometry_msgs::msg::TransformStamped t;
     while (true) {
       try {
         t = tf_buffer_->lookupTransform(base_frame_name_, scan_frame_name, tf2::TimePointZero);
         lidar_[scan_frame_name].BtoS.x = t.transform.translation.x;
         lidar_[scan_frame_name].BtoS.y = t.transform.translation.y;
-        auto q0 = t.transform.rotation.w;
-        auto q1 = t.transform.rotation.x;
-        auto q2 = t.transform.rotation.y;
-        auto q3 = t.transform.rotation.z;
+        double q0, q1, q2, q3;
+        q0 = t.transform.rotation.w; q1 = t.transform.rotation.x; q2 = t.transform.rotation.y; q3 = t.transform.rotation.z;
         lidar_[scan_frame_name].BthetaS = atan2(2.0 * (q1*q2 + q0*q3), q0*q0 + q1*q1 - q2*q2 - q3*q3);
         RCLCPP_INFO_STREAM(this->get_logger(), " " << scan_frame_name << " : [" << lidar_[scan_frame_name].BtoS.x << ", " << lidar_[scan_frame_name].BtoS.y << ", " << lidar_[scan_frame_name].BthetaS << "]");
         break;

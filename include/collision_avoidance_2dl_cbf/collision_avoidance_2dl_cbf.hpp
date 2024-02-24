@@ -57,6 +57,10 @@ private:
   bool summationCBFs(const std::vector<Point> BtoP_, double& B, double& LgB1, double& LgB2);
   bool calculateLineIntersection(const Point& p1, const Point& p2, const Point& p3, const Point& p4, Point& intersection);
   bool calculatePolygonIntersection(const Point& target, Point& intersection, std::size_t& number);
+  // bool getlookupTransform(const std::string& source, const std::string& target, Point& xy, double& yaw);
+
+  std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
+  std::shared_ptr<tf2_ros::TransformListener> tf_listener_{nullptr};
 
   rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_out_pub_;
   rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr debug_pub_;
