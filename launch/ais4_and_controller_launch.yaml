@@ -1,9 +1,13 @@
 launch:
-
+- arg: {name: use_sim_time, default: "true"}
 - include:
+    if: $(var use_sim_time)
     file: "$(find-pkg-share ais_launch)/launch/include/ais4_sim_launch.yaml"
     arg:
     - {name: world, value: /opt/ros/humble/share/turtlebot3_gazebo/worlds/turtlebot3_dqn_stage1.world}
+- include:
+    unless: $(var use_sim_time)
+    file: "$(find-pkg-share ais_launch)/launch/include/ais4_robot_launch.yaml"
 
 # - node:
 #     pkg: "mouse_teleop"
@@ -12,6 +16,20 @@ launch:
 #     - {from: "mouse_vel", to: "cmd_vel_ref"}
 #     param:
 #     - {name: "scale", value: 0.5}
+
+- node:
+    unless: $(var use_sim_time)
+    pkg: "joy"
+    exec: "joy_node"
+
+- node:
+    unless: $(var use_sim_time)
+    pkg: "ais_ui"
+    exec: "ais_teleop_joy"
+    remap:
+    - {from: "cmd_vel/joy", to: "cmd_vel_ref"}
+    param:
+    - {name: "scale", value: 0.5}
 
 - node:
     pkg: "collision_avoidance_2dl_cbf"
@@ -24,7 +42,7 @@ launch:
     param:
     - {name: "base_frame", value: "base_link"}
     - {name: "scan_topic_names", value: ["scan", "back_scan"]}
-    - {name: "gamma", value: 1.0}
+    - {name: "gamma", value: 0.5}
     - {name: "epsilon", value: 0.0001}
     - {name: "is_debug", value: true}
 
@@ -46,25 +64,29 @@ launch:
 # - include:
 #     file: "$(find-pkg-share nav2_bringup)/launch/localization_launch.py"
 #     arg:
-#     - {name: map, value: /home/kimura/map.yaml}
+#     - {name: use_sim_time, value: $(var use_sim_time)}
+#     - {name: params_file, value: $(find-pkg-share suitcase_nav)/param/suitcase_nav2.yaml}
+#     - {name: map, value: $(find-pkg-share sc_map_server)/map/giken6F_real/giken6F_real_localization.yaml}
+#     # - {name: map, value: $(find-pkg-share sc_map_server)/map/tb3_dqn_stage1_localization/tb3_dqn_stage1_localization.yaml}
 
-- include:
-    file: "$(find-pkg-share nav2_bringup)/launch/bringup_launch.py"
-    arg:
-    - {name: use_sim_time, value: "true"}
-    - {name: map, value: /home/kimura/map.yaml}
-    - {name: params_file, value: $(find-pkg-share suitcase_nav)/param/suitcase_nav2.yaml}
+# - include:
+#     file: "$(find-pkg-share nav2_bringup)/launch/bringup_launch.py"
+#     arg:
+#     - {name: use_sim_time, value: $(var use_sim_time)}
+#     - {name: params_file, value: $(find-pkg-share suitcase_nav)/param/suitcase_nav2.yaml}
+#     # - {name: map, value: $(find-pkg-share sc_map_server)/map/tb3_dqn_stage1_localization/tb3_dqn_stage1_localization.yaml}
+#     - {name: map, value: $(find-pkg-share sc_map_server)/map/giken6F_real/giken6F_real_localization.yaml}
 
 # - node:
 #     pkg: tf2_ros
 #     exec: static_transform_publisher
 #     args: "0.0 0.0 -0.0 -0.0 0.0 0.0 odom map"
 #     param:
-#     - {name: "use_sim_time", value: true}
+#     - {name: "use_sim_time", value: $(var use_sim_time)}
 
-- node:
-    pkg: rviz2
-    exec: rviz2
-    args: "-d $(find-pkg-share collision_avoidance_2dl_cbf)/config/ais4.rviz"
-    param:
-    - {name: "use_sim_time", value: true}
+# - node:
+#     pkg: rviz2
+#     exec: rviz2
+#     args: "-d $(find-pkg-share collision_avoidance_2dl_cbf)/config/ais4.rviz"
+#     param:
+#     - {name: "use_sim_time", value: $(var use_sim_time)}
