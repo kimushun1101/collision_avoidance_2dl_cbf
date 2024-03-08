@@ -2,22 +2,30 @@
 
 Collision Avoidance Assist Control with 2D LiDAR Control Barrier Function.
 
-## Interfaces
+## ROS Interfaces
 
-### Subscribe
-- cmd_vel_in
+### Topics
 
-### Publish
-- cmd_vel_out
+Subscribe
+| Topic name | Type |
+| ---- | ---- |
+| cmd_vel_in | geometry_msgs/msg/Twist |
+| collision_polygon | geometry_msgs/msg/PolygonStamped |
+| scan | sensor_msgs/msg/LaserScan |
+
+Publish
+| Topic name | Type |
+| ---- | ---- |
+| cmd_vel_out | geometry_msgs/msg/Twist |
 
 ### Parameters
 
 | Parameter | Type | Default | Description |
 | ---- | ---- | ---- | ---- |
-| base_frame_name | String | "base_link" | TD |
-| scan_topic_names | String array | ["scan"] | TD |
-| gamma | Double | 1.0 |  TD |
-| epsilon | Double | 0.0005 | TD |
+| polygon_topic_name | String | "collision_polygon" | Change the topic name of Collision boundary shape |
+| scan_topic_names | String array | ["scan"] | Change the topic name of scan, multiple topics also acceptable |
+| gamma | Double | 0.5 | Large value quickly approaches the boundary |
+| epsilon | Double | 0.001 | Large value are closer to the boundary |
 
 ## Install
 
@@ -55,7 +63,8 @@ export TURTLEBOT3_MODEL=burger
     ros2 run collision_avoidance_2dl_cbf publish_u_ref_sample_node
     ```
 
-3. Launch an actual robot and the CBF controller.
+3. Launch an actual robot and the CBF controller.  
+    Refer https://emanual.robotis.com/docs/en/platform/turtlebot3/quick-start/  
     Terminal 1
     ```
     ros2 launch collision_avoidance_2dl_cbf turtlebot3_example.launch.yaml use_sim_time:=false

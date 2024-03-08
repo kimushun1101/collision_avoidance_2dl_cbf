@@ -70,11 +70,8 @@ private:
 
   double gamma_, epsilon_;
   std::string base_frame_name_;
-  std::string scan_frame_name_;
-
-  std::vector<Point> collision_poly_, BtoP_;
+  std::vector<Point> collision_poly_;
   std::map<std::string, Scan> lidar_;
-  std::vector<std::string> scan_topic_names_;
-  float u_h1_, u_h2_;
+  double u_ref1_, u_ref2_;
   bool is_debug_;
 };

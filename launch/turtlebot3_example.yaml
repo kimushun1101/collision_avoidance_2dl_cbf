@@ -24,10 +24,10 @@ launch:
     - {from: "/cmd_vel_in", to: "/cmd_vel_ref"}
     - {from: "/cmd_vel_out", to: "/cmd_vel"}
     param:
-    - {name: "base_frame", value: "base_link"}
+    - {name: "polygon_topic_name", value: "collision_polygon"}
     - {name: "scan_topic_names", value: ["scan"]}
-    - {name: "gamma", value: 1.0}
-    - {name: "epsilon", value: 0.0005}
+    - {name: "gamma", value: 0.5}
+    - {name: "epsilon", value: 0.001}
     - {name: "is_debug", value: true}
 
 - node:

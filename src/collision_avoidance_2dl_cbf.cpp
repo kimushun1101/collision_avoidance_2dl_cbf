@@ -16,13 +16,13 @@
 
 CollisionAvoidance2dlCBF::CollisionAvoidance2dlCBF() : Node("collision_avoidance_2dl_cbf")
 {
-  this->declare_parameter("base_frame_name", "base_link");
-  base_frame_name_ = this->get_parameter("base_frame_name").as_string();
+  this->declare_parameter("polygon_topic_name", "collision_polygon");
+  auto polygon_topic_name = this->get_parameter("polygon_topic_name").as_string();
   std::vector<std::string> v{"scan"};
   this->declare_parameter("scan_topic_names", v);
-  scan_topic_names_ = this->get_parameter("scan_topic_names").as_string_array();
-  scan_subs_.resize(scan_topic_names_.size());
-  this->declare_parameter("gamma", 1.0);
+  auto scan_topic_names = this->get_parameter("scan_topic_names").as_string_array();
+  scan_subs_.resize(scan_topic_names.size());
+  this->declare_parameter("gamma", 0.5);
   gamma_ = this->get_parameter("gamma").as_double();
   this->declare_parameter("epsilon", 0.001);
   epsilon_ = this->get_parameter("epsilon").as_double();
@@ -31,14 +31,14 @@ CollisionAvoidance2dlCBF::CollisionAvoidance2dlCBF() : Node("collision_avoidance
 
   using std::placeholders::_1;
   cmd_vel_out_pub_ = this->create_publisher<geometry_msgs::msg::Twist>("cmd_vel_out", 10);
-  for (std::size_t i = 0; i < scan_topic_names_.size(); i++) {
+  for (std::size_t i = 0; i < scan_topic_names.size(); i++) {
     scan_subs_[i] = this->create_subscription<sensor_msgs::msg::LaserScan>(
-      scan_topic_names_[i], rclcpp::SensorDataQoS(), std::bind(&CollisionAvoidance2dlCBF::scanCallback, this, _1));
+      scan_topic_names[i], rclcpp::SensorDataQoS(), std::bind(&CollisionAvoidance2dlCBF::scanCallback, this, _1));
   }
   cmd_vel_in_sub_ = this->create_subscription<geometry_msgs::msg::Twist>(
     "cmd_vel_in", 1, std::bind(&CollisionAvoidance2dlCBF::cmd_vel_inCallback, this, _1));
   collision_poly_sub_ = this->create_subscription<geometry_msgs::msg::PolygonStamped>(
-    "collision_polygon", 1, std::bind(&CollisionAvoidance2dlCBF::collision_polygonCallback, this, _1));
+    polygon_topic_name, 1, std::bind(&CollisionAvoidance2dlCBF::collision_polygonCallback, this, _1));
 
   tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
   tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
@@ -56,13 +56,15 @@ CollisionAvoidance2dlCBF::~CollisionAvoidance2dlCBF()
 
 void CollisionAvoidance2dlCBF::cmd_vel_inCallback(geometry_msgs::msg::Twist::ConstSharedPtr msg)
 {
-  u_h1_ = msg->linear.x;
-  u_h2_ = msg->angular.z;
+  u_ref1_ = msg->linear.x;
+  u_ref2_ = msg->angular.z;
   publishAssistInput();
 }
 
 void CollisionAvoidance2dlCBF::scanCallback(sensor_msgs::msg::LaserScan::ConstSharedPtr msg)
 {
+  if (collision_poly_.empty())
+    return;
   auto scan_frame_name = msg->header.frame_id;
   auto itr = lidar_.find(scan_frame_name);
   if (itr == lidar_.end()) {
@@ -74,7 +76,7 @@ void CollisionAvoidance2dlCBF::scanCallback(sensor_msgs::msg::LaserScan::ConstSh
         double q0, q1, q2, q3;
         q0 = t.transform.rotation.w; q1 = t.transform.rotation.x; q2 = t.transform.rotation.y; q3 = t.transform.rotation.z;
         lidar_[scan_frame_name].BthetaS = atan2(2.0 * (q1*q2 + q0*q3), q0*q0 + q1*q1 - q2*q2 - q3*q3);
-        RCLCPP_INFO_STREAM(this->get_logger(), " " << scan_frame_name << " : [" << lidar_[scan_frame_name].BtoS.x << ", " << lidar_[scan_frame_name].BtoS.y << ", " << lidar_[scan_frame_name].BthetaS << "]");
+        RCLCPP_INFO_STREAM(this->get_logger(), "scan frame name is " << scan_frame_name << " : [" << lidar_[scan_frame_name].BtoS.x << ", " << lidar_[scan_frame_name].BtoS.y << ", " << lidar_[scan_frame_name].BthetaS << "]");
         break;
       } catch (const tf2::TransformException & ex) {
         RCLCPP_WARN(this->get_logger(), "Could not transform %s to %s: %s", base_frame_name_.c_str(), scan_frame_name.c_str(), ex.what());
@@ -83,7 +85,6 @@ void CollisionAvoidance2dlCBF::scanCallback(sensor_msgs::msg::LaserScan::ConstSh
     }
     lidar_[scan_frame_name].BtoP.resize(msg->ranges.size());
   }
-  // step 1: calculate r_i and theta_i
   double SrP, SthetaP;
   for (std::size_t i = 0; i < msg->ranges.size(); i++) {
     SrP = msg->ranges[i];
@@ -97,6 +98,8 @@ void CollisionAvoidance2dlCBF::scanCallback(sensor_msgs::msg::LaserScan::ConstSh
 
 void CollisionAvoidance2dlCBF::collision_polygonCallback(geometry_msgs::msg::PolygonStamped::ConstSharedPtr msg)
 {
+  base_frame_name_ = msg->header.frame_id;
+  RCLCPP_INFO_STREAM_ONCE(this->get_logger(), "Polygon base frame name : " << base_frame_name_);
   std::size_t new_size = msg->polygon.points.size();
   collision_poly_.resize(new_size);
   for (std::size_t i = 0; i < new_size; i++) {
@@ -121,7 +124,7 @@ void CollisionAvoidance2dlCBF::publishAssistInput()
   double h = 1.0/B;
   double Lgh1 = - LgB1 / (B*B);
   double Lgh2 = - LgB2 / (B*B);
-  double I = Lgh1*u_h1_ + Lgh2*u_h2_;
+  double I = Lgh1*u_ref1_ + Lgh2*u_ref2_;
   double J = -gamma_*(h - epsilon_);
   double u1, u2;
   if (I < J) {
@@ -133,8 +136,8 @@ void CollisionAvoidance2dlCBF::publishAssistInput()
   }
 
   auto msg = geometry_msgs::msg::Twist();
-  msg.linear.x = u1 + u_h1_;
-  msg.angular.z = u2 + u_h2_;
+  msg.linear.x = u1 + u_ref1_;
+  msg.angular.z = u2 + u_ref2_;
   cmd_vel_out_pub_->publish(msg);
 
   if (is_collision) {
@@ -142,12 +145,6 @@ void CollisionAvoidance2dlCBF::publishAssistInput()
   }
 
   if (is_debug_) {
-    // RCLCPP_INFO_STREAM(this->get_logger(), "B, LgB1, LgB2: " << B << ", " << LgB1 << ", " << LgB2);
-    // RCLCPP_INFO_STREAM(this->get_logger(), "h, Lgh1, Lgh2: " << h << ", " << Lgh1 << ", " << Lgh2);
-    // RCLCPP_INFO_STREAM(this->get_logger(), "u: " << u1 << ", " << u2);
-    // RCLCPP_INFO_STREAM(this->get_logger(), "u_h: " << u_h1_ << ", " << u_h2_);
-    // RCLCPP_INFO_STREAM(this->get_logger(), "u+u_h: " << u1+u_h1_ << ", " << u2 + u_h2_);
-    // RCLCPP_INFO_STREAM(this->get_logger(), "I, J, I - J: " << I << ", " << J << ", " << (I - J));
     auto debug_msg = std_msgs::msg::Float64MultiArray();
     debug_msg.data.push_back(h);
     debug_msg.data.push_back(I);
@@ -155,7 +152,7 @@ void CollisionAvoidance2dlCBF::publishAssistInput()
     debug_msg.data.push_back(gamma_);
     debug_msg.data.push_back(epsilon_);
     try {
-      geometry_msgs::msg::TransformStamped t = tf_buffer_->lookupTransform("map", "base_link", tf2::TimePointZero);
+      geometry_msgs::msg::TransformStamped t = tf_buffer_->lookupTransform("odom", "base_link", tf2::TimePointZero);
       double q0, q1, q2, q3;
       q0 = t.transform.rotation.w; q1 = t.transform.rotation.x; q2 = t.transform.rotation.y; q3 = t.transform.rotation.z;
       debug_msg.data.push_back(t.transform.translation.x);
@@ -170,7 +167,8 @@ void CollisionAvoidance2dlCBF::publishAssistInput()
 bool CollisionAvoidance2dlCBF::summationCBFs(const std::vector<Point> BtoP, double& B, double& LgB1, double& LgB2)
 {
   bool collision_check = false;
-  for (std::size_t i = 0; i < BtoP.size(); i++) {
+  std::size_t N = BtoP.size();
+  for (std::size_t i = 0; i < N; i++) {
     // step 1: calculate r_i
     double r_i = sqrt(BtoP[i].x*BtoP[i].x + BtoP[i].y*BtoP[i].y);
     double theta_i = atan2(BtoP[i].y, BtoP[i].x);
@@ -184,15 +182,15 @@ bool CollisionAvoidance2dlCBF::summationCBFs(const std::vector<Point> BtoP, doub
       continue;
     }
 
-    // step 3: calculate r_ci and drc_dtheta
-    double x1 = collision_poly_[poly_num].x;
-    double y1 = collision_poly_[poly_num].y;
-    double x2 = collision_poly_[poly_num+1].x;
-    double y2 = collision_poly_[poly_num+1].y;
-    double a  = abs(x2*y1 - x1*y2)/sqrt((y2-y1)*(y2-y1)+(x1-x2)*(x1-x2));
-    double alpha = atan2(-(x2-x1),(y2-y1));
-    double r_ci = a/cos(theta_i - alpha);
-    double drc_dtheta = a*tan(theta_i - alpha)/(cos(theta_i - alpha));
+    // step 3: calculate r_c(theta_i) and drc_dtheta(theta_i)
+    double p1x = collision_poly_[poly_num].x;
+    double p1y = collision_poly_[poly_num].y;
+    double p2x = collision_poly_[poly_num+1].x;
+    double p2y = collision_poly_[poly_num+1].y;
+    double r_perp  = abs(p2x*p1y - p1x*p2y)/sqrt((p2y-p1y)*(p2y-p1y)+(p1x-p2x)*(p1x-p2x));
+    double theta_perp = atan2(-(p2x-p1x),(p2y-p1y));
+    double r_ci = r_perp/cos(theta_i - theta_perp);
+    double drc_dtheta = r_perp*tan(theta_i - theta_perp)/(cos(theta_i - theta_perp));
 
     // step 4: calculate B and LgB
     double L = 0.001;
@@ -212,7 +210,6 @@ bool CollisionAvoidance2dlCBF::summationCBFs(const std::vector<Point> BtoP, doub
   return collision_check;
 }
 
-
 bool CollisionAvoidance2dlCBF::calculateLineIntersection(const Point& p1, const Point& p2, const Point& p3, const Point& p4, Point& intersection)
 {
   double det = (p1.x - p2.x) * (p4.y - p3.y) - (p4.x - p3.x) * (p1.y - p2.y);
@@ -220,16 +217,16 @@ bool CollisionAvoidance2dlCBF::calculateLineIntersection(const Point& p1, const 
     RCLCPP_DEBUG_STREAM(this->get_logger(), "det = " << det);
     return false;
   }
-  double t = ((p4.y - p3.y) * (p4.x - p2.x) + (p3.x - p4.x) * (p4.y - p2.y)) / det;
-  double s = ((p2.y - p1.y) * (p4.x - p2.x) + (p1.x - p2.x) * (p4.y - p2.y)) / det;
+  double s1 = ((p4.y - p3.y) * (p4.x - p2.x) + (p3.x - p4.x) * (p4.y - p2.y)) / det;
+  double s2 = ((p2.y - p1.y) * (p4.x - p2.x) + (p1.x - p2.x) * (p4.y - p2.y)) / det;
 
-  if (0.0 <= t && t <= 1.0 && 0.0 <= s && s <= 1.0) {
-    intersection.x = t * p1.x + (1.0 - t) * p2.x;
-    intersection.y = t * p1.y + (1.0 - t) * p2.y;
+  if (0.0 <= s1 && s1 <= 1.0 && 0.0 <= s2 && s2 <= 1.0) {
+    intersection.x = s1 * p1.x + (1.0 - s1) * p2.x;
+    intersection.y = s1 * p1.y + (1.0 - s1) * p2.y;
     return true;
   } else {
-    // RCLCPP_DEBUG_STREAM(this->get_logger(), "t: " << t);
-    // RCLCPP_DEBUG_STREAM(this->get_logger(), "s: " << s);
+    // RCLCPP_DEBUG_STREAM(this->get_logger(), "s1: " << s1);
+    // RCLCPP_DEBUG_STREAM(this->get_logger(), "s2: " << s2);
     return false;
   }
 }
