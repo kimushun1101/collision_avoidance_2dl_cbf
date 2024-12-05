@@ -49,14 +49,14 @@ export TURTLEBOT3_MODEL=burger
 ## Example
 1. Launch Simulation and the CBF controller at the same time.
     ```
-    ros2 launch collision_avoidance_2dl_cbf turtlebot3_example.launch.yaml
+    ros2 launch collision_avoidance_2dl_cbf turtlebot3_example_launch.yaml
     ```
     Drugging on Mouse Teleop commands a reference input.
 
 2. Command a static reference input.
     Terminal 1
     ```
-    ros2 launch collision_avoidance_2dl_cbf turtlebot3_example.launch.yaml
+    ros2 launch collision_avoidance_2dl_cbf turtlebot3_example_launch.yaml
     ```
     Terminal 2
     ```
@@ -67,7 +67,7 @@ export TURTLEBOT3_MODEL=burger
     Refer https://emanual.robotis.com/docs/en/platform/turtlebot3/quick-start/  
     Terminal 1
     ```
-    ros2 launch collision_avoidance_2dl_cbf turtlebot3_example.launch.yaml use_sim_time:=false
+    ros2 launch collision_avoidance_2dl_cbf turtlebot3_example_launch.yaml use_sim_time:=false
     ```
     Terminal 2
     ```
