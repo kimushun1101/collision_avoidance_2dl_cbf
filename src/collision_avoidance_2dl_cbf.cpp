@@ -93,7 +93,7 @@ void CollisionAvoidance2dlCBF::scanCallback(sensor_msgs::msg::LaserScan::ConstSh
     lidar_[scan_frame_name].BtoP[i].x = SrP * cos(SthetaP + lidar_[scan_frame_name].BthetaS) + lidar_[scan_frame_name].BtoS.x;
     lidar_[scan_frame_name].BtoP[i].y = SrP * sin(SthetaP + lidar_[scan_frame_name].BthetaS) + lidar_[scan_frame_name].BtoS.y;
   }
-  publishAssistInput();
+  // publishAssistInput();
 }
 
 void CollisionAvoidance2dlCBF::collision_polygonCallback(geometry_msgs::msg::PolygonStamped::ConstSharedPtr msg)
@@ -121,16 +121,17 @@ void CollisionAvoidance2dlCBF::publishAssistInput()
   for(auto itr = lidar_.begin(); itr != lidar_.end(); ++itr) {
     is_collision |= summationCBFs(itr->second.BtoP, B, LgB1, LgB2);
   }
-  double h = 1.0/B;
-  double Lgh1 = - LgB1 / (B*B);
-  double Lgh2 = - LgB2 / (B*B);
-  double I = Lgh1*u_ref1_ + Lgh2*u_ref2_;
-  double J = -gamma_*(h - epsilon_);
+
+  double K = 0.1;
+  double C = 0.1;
+
+  double I = LgB1*u_ref1_ + LgB2*u_ref2_;
+  double J = K*B+C;
   double u1, u2;
-  if (I < J) {
-    double Lgh_sq = Lgh1*Lgh1 + Lgh2*Lgh2;
-    u1 = -(I - J) * Lgh1 / Lgh_sq;
-    u2 = -(I - J) * Lgh2 / Lgh_sq;
+  if (I > J) {
+    double LgB_sq = LgB1*LgB1 + LgB2*LgB2;
+    u1 = -(I - J) * LgB1 / LgB_sq;
+    u2 = -(I - J) * LgB2 / LgB_sq;
   } else {
     u1 = u2 = 0.0;
   }
@@ -141,12 +142,12 @@ void CollisionAvoidance2dlCBF::publishAssistInput()
   cmd_vel_out_pub_->publish(msg);
 
   if (is_collision) {
-    RCLCPP_WARN_STREAM(this->get_logger(), "Set a larger epsilon. [epsilon, h]: [" << epsilon_ << ", " << h << "]");
+    RCLCPP_WARN_STREAM(this->get_logger(), "Set a larger epsilon. [epsilon, h]: [" << epsilon_ << ", " << B << "]");
   }
 
   if (is_debug_) {
     auto debug_msg = std_msgs::msg::Float64MultiArray();
-    debug_msg.data.push_back(h);
+    debug_msg.data.push_back(B);
     debug_msg.data.push_back(I);
     debug_msg.data.push_back(J);
     debug_msg.data.push_back(gamma_);
@@ -193,19 +194,22 @@ bool CollisionAvoidance2dlCBF::summationCBFs(const std::vector<Point> BtoP, doub
     double drc_dtheta = r_perp*tan(theta_i - theta_perp)/(cos(theta_i - theta_perp));
 
     // step 4: calculate B and LgB
-    double L = 0.001;
+    double L = 0.01;
     double ri_rc = r_i - r_ci;
     if (ri_rc < 0.0) {
       RCLCPP_ERROR_STREAM(this->get_logger(), "r_i - r_ci < 0: " << r_i << ", " << r_ci << ", " << theta_i);
       collision_check = true;
       continue;
     }
+    if (i == 0) {
+      RCLCPP_ERROR_STREAM(this->get_logger(), "r_i - r_ci < 0: " << r_i << ", " << r_ci << ", " << theta_i << ", " << r_i - r_ci);
+    }
     double ri_rc_sq = ri_rc * ri_rc;
-    B += 1.0/ri_rc + L*(r_i*r_i + r_ci*r_ci);
+    B += 1.0/ri_rc + L*(r_i*r_i + 1.0/r_ci);
     double dBdx1 = -1.0/ri_rc_sq + 2.0*L*r_i;
-    double dBdx2 = +1.0/ri_rc_sq + 2.0*L*r_ci;
+    double dBdx2 = +1.0/ri_rc_sq + L/(r_ci*r_ci);
     LgB1 += dBdx1*(-cos(theta_i));
-    LgB2 += dBdx2*(-drc_dtheta);
+    LgB2 += dBdx1*sin(theta_i)/r_i*drc_dtheta + dBdx2*(-drc_dtheta);
   }
   return collision_check;
 }
