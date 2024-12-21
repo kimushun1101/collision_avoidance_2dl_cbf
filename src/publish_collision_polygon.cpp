@@ -54,8 +54,8 @@ PublishCollisionPolygon::~PublishCollisionPolygon()
 void PublishCollisionPolygon::timer_callback()
 {
   publish_circle(robot_, 30, robot_poly_pub_);
-  publish_circle(user_, 30, user_poly_pub_);
-  publish_collision(robot_, user_, plot_count_, collision_poly_pub_);
+  // publish_circle(user_, 30, user_poly_pub_);
+  // publish_collision(robot_, user_, plot_count_, collision_poly_pub_);
 }
 
 void PublishCollisionPolygon::publish_circle(const Circle& c, std::size_t plot_count, const rclcpp::Publisher<geometry_msgs::msg::PolygonStamped>::SharedPtr pub)

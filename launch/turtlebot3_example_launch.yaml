@@ -38,7 +38,7 @@ launch:
     - {name: "base_frame_id", value: "base_link"}
     - {name: "plot_count", value: 100}
     # - {name: "robot", value: {x: 0.06, y: 0.0, r: 0.1812}}
-    - {name: "robot.x", value: -0.12}
+    - {name: "robot.x", value: 0.032}
     - {name: "robot.y", value: 0.0}
     - {name: "robot.r", value: 0.35}
     # - {name: "user",  value: {x: -0.06, y: -0.17, r: 0.3}}
