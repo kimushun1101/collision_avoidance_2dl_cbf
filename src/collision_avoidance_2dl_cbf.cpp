@@ -196,6 +196,7 @@ bool CollisionAvoidance2dlCBF::summationCBFs(const std::vector<Point> BtoP, doub
     double theta_perp = atan2(-(p2x-p1x),(p2y-p1y));
     double r_ci = r_perp/cos(theta_i - theta_perp);
     double drc_dtheta = r_perp*tan(theta_i - theta_perp)/(cos(theta_i - theta_perp));
+    // double drc_dtheta = 0; // Theoretical value when the collision detection shape is a circle centered on the center between the wheels
 
     // step 4: calculate B and LgB
     double ri_rc = r_i - r_ci;

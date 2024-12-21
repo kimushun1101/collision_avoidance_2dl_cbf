@@ -37,9 +37,9 @@ launch:
     param:
     - {name: "base_frame_id", value: "base_link"}
     - {name: "plot_count", value: 100}
-    - {name: "robot.x", value: -0.32}
+    - {name: "robot.x", value: -0.032}
     - {name: "robot.y", value: 0.0}
-    - {name: "robot.r", value: 0.55}
+    - {name: "robot.r", value: 0.35}
 
 - node:
     pkg: rviz2
