@@ -63,25 +63,21 @@ void CollisionAvoidance2dlCBF::cmd_vel_inCallback(geometry_msgs::msg::Twist::Con
 
 void CollisionAvoidance2dlCBF::scanCallback(sensor_msgs::msg::LaserScan::ConstSharedPtr msg)
 {
-  if (collision_poly_.empty())
-    return;
   auto scan_frame_name = msg->header.frame_id;
   auto itr = detected_point_.find(scan_frame_name);
+  // scan_frame_name is not found
   if (itr == detected_point_.end()) {
-    while (true) {
-      try {
-        geometry_msgs::msg::TransformStamped t = tf_buffer_->lookupTransform(base_frame_name_, scan_frame_name, tf2::TimePointZero);
-        detected_point_[scan_frame_name].BtoS.x = t.transform.translation.x;
-        detected_point_[scan_frame_name].BtoS.y = t.transform.translation.y;
-        double q0, q1, q2, q3;
-        q0 = t.transform.rotation.w; q1 = t.transform.rotation.x; q2 = t.transform.rotation.y; q3 = t.transform.rotation.z;
-        detected_point_[scan_frame_name].BtoS_yaw = atan2(2.0 * (q1*q2 + q0*q3), q0*q0 + q1*q1 - q2*q2 - q3*q3);
-        RCLCPP_INFO_STREAM(this->get_logger(), "scan frame name is " << scan_frame_name << " : [" << detected_point_[scan_frame_name].BtoS.x << ", " << detected_point_[scan_frame_name].BtoS.y << ", " << detected_point_[scan_frame_name].BtoS_yaw << "]");
-        break;
-      } catch (const tf2::TransformException & ex) {
-        RCLCPP_WARN(this->get_logger(), "Could not transform %s to %s: %s", base_frame_name_.c_str(), scan_frame_name.c_str(), ex.what());
-      }
-      rclcpp::sleep_for(std::chrono::seconds(1));
+    try {
+      geometry_msgs::msg::TransformStamped t = tf_buffer_->lookupTransform(base_frame_name_, scan_frame_name, tf2::TimePointZero);
+      detected_point_[scan_frame_name].BtoS.x = t.transform.translation.x;
+      detected_point_[scan_frame_name].BtoS.y = t.transform.translation.y;
+      double q0, q1, q2, q3;
+      q0 = t.transform.rotation.w; q1 = t.transform.rotation.x; q2 = t.transform.rotation.y; q3 = t.transform.rotation.z;
+      detected_point_[scan_frame_name].BtoS_yaw = atan2(2.0 * (q1*q2 + q0*q3), q0*q0 + q1*q1 - q2*q2 - q3*q3);
+      RCLCPP_INFO_STREAM(this->get_logger(), "scan frame name is " << scan_frame_name << " : [" << detected_point_[scan_frame_name].BtoS.x << ", " << detected_point_[scan_frame_name].BtoS.y << ", " << detected_point_[scan_frame_name].BtoS_yaw << "]");
+    } catch (const tf2::TransformException & ex) {
+      RCLCPP_WARN(this->get_logger(), "Could not transform %s to %s: %s", base_frame_name_.c_str(), scan_frame_name.c_str(), ex.what());
+      return;
     }
     detected_point_[scan_frame_name].BtoP.resize(msg->ranges.size());
   }
@@ -139,6 +135,8 @@ void CollisionAvoidance2dlCBF::publishAssistInput()
   auto msg = geometry_msgs::msg::Twist();
   msg.linear.x = u1 + u_ref1_;
   msg.angular.z = u2 + u_ref2_;
+  // msg.linear.x = (abs(msg.linear.x) < 0.01) ? 0 : msg.linear.x;
+  // msg.angular.z = (abs(msg.angular.z) < 0.1) ? 0 : msg.angular.z;
   cmd_vel_out_pub_->publish(msg);
 
   if (is_collision) {
@@ -200,9 +198,6 @@ bool CollisionAvoidance2dlCBF::summationCBFs(const std::vector<Point> BtoP, doub
       RCLCPP_ERROR_STREAM(this->get_logger(), "r_i - r_ci < 0: " << r_i << ", " << r_ci << ", " << theta_i);
       collision_check = true;
       continue;
-    }
-    if (i == 0) {
-      RCLCPP_ERROR_STREAM(this->get_logger(), "r_i - r_ci < 0: " << r_i << ", " << r_ci << ", " << theta_i << ", " << r_i - r_ci);
     }
     double ri_rc_sq = ri_rc * ri_rc;
     B += 1.0/ri_rc + L*(r_i*r_i + 1.0/r_ci);
