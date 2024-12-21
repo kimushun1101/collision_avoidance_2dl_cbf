@@ -178,8 +178,12 @@ bool CollisionAvoidance2dlCBF::summationCBFs(const std::vector<Point> BtoP, doub
       pcl::PointXYZI point;
       point.x = BtoC.x;
       point.y = BtoC.y;
-      point.z = 0.01;
+      point.z = 0.172;
       point.intensity = 1.0;
+      cloud->points.push_back(point);
+
+      point.x = BtoP[i].x;
+      point.y = BtoP[i].y;
       cloud->points.push_back(point);
     }
 
