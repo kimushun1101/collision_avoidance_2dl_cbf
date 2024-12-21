@@ -75,8 +75,8 @@ void CollisionAvoidance2dlCBF::scanCallback(sensor_msgs::msg::LaserScan::ConstSh
         detected_point_[scan_frame_name].BtoS.y = t.transform.translation.y;
         double q0, q1, q2, q3;
         q0 = t.transform.rotation.w; q1 = t.transform.rotation.x; q2 = t.transform.rotation.y; q3 = t.transform.rotation.z;
-        detected_point_[scan_frame_name].BthetaS = atan2(2.0 * (q1*q2 + q0*q3), q0*q0 + q1*q1 - q2*q2 - q3*q3);
-        RCLCPP_INFO_STREAM(this->get_logger(), "scan frame name is " << scan_frame_name << " : [" << detected_point_[scan_frame_name].BtoS.x << ", " << detected_point_[scan_frame_name].BtoS.y << ", " << detected_point_[scan_frame_name].BthetaS << "]");
+        detected_point_[scan_frame_name].BtoS_yaw = atan2(2.0 * (q1*q2 + q0*q3), q0*q0 + q1*q1 - q2*q2 - q3*q3);
+        RCLCPP_INFO_STREAM(this->get_logger(), "scan frame name is " << scan_frame_name << " : [" << detected_point_[scan_frame_name].BtoS.x << ", " << detected_point_[scan_frame_name].BtoS.y << ", " << detected_point_[scan_frame_name].BtoS_yaw << "]");
         break;
       } catch (const tf2::TransformException & ex) {
         RCLCPP_WARN(this->get_logger(), "Could not transform %s to %s: %s", base_frame_name_.c_str(), scan_frame_name.c_str(), ex.what());
@@ -85,13 +85,13 @@ void CollisionAvoidance2dlCBF::scanCallback(sensor_msgs::msg::LaserScan::ConstSh
     }
     detected_point_[scan_frame_name].BtoP.resize(msg->ranges.size());
   }
-  double SrP, SthetaP;
+  double SrP, StoP_yaw;
   for (std::size_t i = 0; i < msg->ranges.size(); i++) {
     SrP = msg->ranges[i];
     if(SrP > msg->range_max) SrP = msg->range_max;
-    SthetaP = msg->angle_min + i * msg->angle_increment;
-    detected_point_[scan_frame_name].BtoP[i].x = SrP * cos(SthetaP + detected_point_[scan_frame_name].BthetaS) + detected_point_[scan_frame_name].BtoS.x;
-    detected_point_[scan_frame_name].BtoP[i].y = SrP * sin(SthetaP + detected_point_[scan_frame_name].BthetaS) + detected_point_[scan_frame_name].BtoS.y;
+    StoP_yaw = msg->angle_min + i * msg->angle_increment;
+    detected_point_[scan_frame_name].BtoP[i].x = SrP * cos(StoP_yaw + detected_point_[scan_frame_name].BtoS_yaw) + detected_point_[scan_frame_name].BtoS.x;
+    detected_point_[scan_frame_name].BtoP[i].y = SrP * sin(StoP_yaw + detected_point_[scan_frame_name].BtoS_yaw) + detected_point_[scan_frame_name].BtoS.y;
   }
   // publishAssistInput();
 }

@@ -25,7 +25,7 @@
 #include <functional>
 #include <memory>
 #include <chrono>
-#include <vector>  
+#include <vector>
 #include <math.h>
 #include <iostream>
 #include <fstream>
@@ -46,7 +46,7 @@ private:
 
   struct Scan {
     Point BtoS;
-    double BthetaS;
+    double BtoS_yaw;
     std::vector<Point> BtoP;
   };
 
