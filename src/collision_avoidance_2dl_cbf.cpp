@@ -66,32 +66,32 @@ void CollisionAvoidance2dlCBF::scanCallback(sensor_msgs::msg::LaserScan::ConstSh
   if (collision_poly_.empty())
     return;
   auto scan_frame_name = msg->header.frame_id;
-  auto itr = lidar_.find(scan_frame_name);
-  if (itr == lidar_.end()) {
+  auto itr = detected_point_.find(scan_frame_name);
+  if (itr == detected_point_.end()) {
     while (true) {
       try {
         geometry_msgs::msg::TransformStamped t = tf_buffer_->lookupTransform(base_frame_name_, scan_frame_name, tf2::TimePointZero);
-        lidar_[scan_frame_name].BtoS.x = t.transform.translation.x;
-        lidar_[scan_frame_name].BtoS.y = t.transform.translation.y;
+        detected_point_[scan_frame_name].BtoS.x = t.transform.translation.x;
+        detected_point_[scan_frame_name].BtoS.y = t.transform.translation.y;
         double q0, q1, q2, q3;
         q0 = t.transform.rotation.w; q1 = t.transform.rotation.x; q2 = t.transform.rotation.y; q3 = t.transform.rotation.z;
-        lidar_[scan_frame_name].BthetaS = atan2(2.0 * (q1*q2 + q0*q3), q0*q0 + q1*q1 - q2*q2 - q3*q3);
-        RCLCPP_INFO_STREAM(this->get_logger(), "scan frame name is " << scan_frame_name << " : [" << lidar_[scan_frame_name].BtoS.x << ", " << lidar_[scan_frame_name].BtoS.y << ", " << lidar_[scan_frame_name].BthetaS << "]");
+        detected_point_[scan_frame_name].BthetaS = atan2(2.0 * (q1*q2 + q0*q3), q0*q0 + q1*q1 - q2*q2 - q3*q3);
+        RCLCPP_INFO_STREAM(this->get_logger(), "scan frame name is " << scan_frame_name << " : [" << detected_point_[scan_frame_name].BtoS.x << ", " << detected_point_[scan_frame_name].BtoS.y << ", " << detected_point_[scan_frame_name].BthetaS << "]");
         break;
       } catch (const tf2::TransformException & ex) {
         RCLCPP_WARN(this->get_logger(), "Could not transform %s to %s: %s", base_frame_name_.c_str(), scan_frame_name.c_str(), ex.what());
       }
       rclcpp::sleep_for(std::chrono::seconds(1));
     }
-    lidar_[scan_frame_name].BtoP.resize(msg->ranges.size());
+    detected_point_[scan_frame_name].BtoP.resize(msg->ranges.size());
   }
   double SrP, SthetaP;
   for (std::size_t i = 0; i < msg->ranges.size(); i++) {
     SrP = msg->ranges[i];
     if(SrP > msg->range_max) SrP = msg->range_max;
     SthetaP = msg->angle_min + i * msg->angle_increment;
-    lidar_[scan_frame_name].BtoP[i].x = SrP * cos(SthetaP + lidar_[scan_frame_name].BthetaS) + lidar_[scan_frame_name].BtoS.x;
-    lidar_[scan_frame_name].BtoP[i].y = SrP * sin(SthetaP + lidar_[scan_frame_name].BthetaS) + lidar_[scan_frame_name].BtoS.y;
+    detected_point_[scan_frame_name].BtoP[i].x = SrP * cos(SthetaP + detected_point_[scan_frame_name].BthetaS) + detected_point_[scan_frame_name].BtoS.x;
+    detected_point_[scan_frame_name].BtoP[i].y = SrP * sin(SthetaP + detected_point_[scan_frame_name].BthetaS) + detected_point_[scan_frame_name].BtoS.y;
   }
   // publishAssistInput();
 }
@@ -112,13 +112,13 @@ void CollisionAvoidance2dlCBF::collision_polygonCallback(geometry_msgs::msg::Pol
 
 void CollisionAvoidance2dlCBF::publishAssistInput()
 {
-  if (collision_poly_.empty() || lidar_.empty())
+  if (collision_poly_.empty() || detected_point_.empty())
     return;
 
   double B, LgB1, LgB2;
   B = LgB1 = LgB2 = 0;
   bool is_collision = false;
-  for(auto itr = lidar_.begin(); itr != lidar_.end(); ++itr) {
+  for(auto itr = detected_point_.begin(); itr != detected_point_.end(); ++itr) {
     is_collision |= summationCBFs(itr->second.BtoP, B, LgB1, LgB2);
   }
 

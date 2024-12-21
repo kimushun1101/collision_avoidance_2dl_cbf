@@ -71,7 +71,7 @@ private:
   double gamma_, epsilon_;
   std::string base_frame_name_;
   std::vector<Point> collision_poly_;
-  std::map<std::string, Scan> lidar_;
+  std::map<std::string, Scan> detected_point_;
   double u_ref1_, u_ref2_;
   bool is_debug_;
 };
