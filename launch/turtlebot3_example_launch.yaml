@@ -24,7 +24,7 @@ launch:
     - {from: "/cmd_vel_in", to: "/cmd_vel_ref"}
     - {from: "/cmd_vel_out", to: "/cmd_vel"}
     param:
-    - {name: "polygon_topic_name", value: "robot_polygon"}
+    - {name: "polygon_topic_name", value: "collision_polygon"}
     - {name: "scan_topic_name", value: "scan"}
     - {name: "cbf_param.K", value: 0.1}
     - {name: "cbf_param.C", value: 0.1}
@@ -37,9 +37,9 @@ launch:
     param:
     - {name: "base_frame_id", value: "base_link"}
     - {name: "plot_count", value: 100}
-    - {name: "robot.x", value: -0.032}
-    - {name: "robot.y", value: 0.0}
-    - {name: "robot.r", value: 0.35}
+    - {name: "circle.x", value: -0.032}
+    - {name: "circle.y", value: 0.0}
+    - {name: "circle.r", value: 0.35}
 
 - node:
     pkg: rviz2
