@@ -72,13 +72,13 @@ private:
   rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr debug_values_pub_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr debug_collision_pub_;
   rclcpp::Subscription<geometry_msgs::msg::Twist>::ConstSharedPtr cmd_vel_in_sub_;
-  std::vector<rclcpp::Subscription<sensor_msgs::msg::LaserScan>::ConstSharedPtr> scan_subs_;
+  rclcpp::Subscription<sensor_msgs::msg::LaserScan>::ConstSharedPtr scan_sub_;
   rclcpp::Subscription<geometry_msgs::msg::PolygonStamped>::ConstSharedPtr collision_poly_sub_;
 
   double cbf_param_K_, cbf_param_C_, cbf_param_L_;
   std::string base_frame_name_;
   std::vector<Point> collision_poly_;
-  std::map<std::string, Scan> detected_point_;
+  Scan detected_point_;
   double u_ref1_, u_ref2_;
   bool is_debug_;
 };

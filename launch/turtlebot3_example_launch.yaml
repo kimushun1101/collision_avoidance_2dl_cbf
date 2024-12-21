@@ -25,11 +25,11 @@ launch:
     - {from: "/cmd_vel_out", to: "/cmd_vel"}
     param:
     - {name: "polygon_topic_name", value: "robot_polygon"}
-    - {name: "scan_topic_names", value: ["scan"]}
+    - {name: "scan_topic_name", value: "scan"}
     - {name: "cbf_param.K", value: 0.1}
     - {name: "cbf_param.C", value: 0.1}
     - {name: "cbf_param.L", value: 0.001}
-    - {name: "is_debug", value: false}
+    - {name: "is_debug", value: true}
 
 - node:
     pkg: "collision_avoidance_2dl_cbf"

@@ -18,10 +18,8 @@ CollisionAvoidance2dlCBF::CollisionAvoidance2dlCBF() : Node("collision_avoidance
 {
   this->declare_parameter("polygon_topic_name", "collision_polygon");
   auto polygon_topic_name = this->get_parameter("polygon_topic_name").as_string();
-  std::vector<std::string> v{"scan"};
-  this->declare_parameter("scan_topic_names", v);
-  auto scan_topic_names = this->get_parameter("scan_topic_names").as_string_array();
-  scan_subs_.resize(scan_topic_names.size());
+  this->declare_parameter("scan_topic_name", "scan");
+  auto scan_topic_name = this->get_parameter("scan_topic_name").as_string();
   this->declare_parameter("cbf_param.K", 0.1);
   cbf_param_K_ = this->get_parameter("cbf_param.K").as_double();
   this->declare_parameter("cbf_param.C", 0.1);
@@ -33,12 +31,10 @@ CollisionAvoidance2dlCBF::CollisionAvoidance2dlCBF() : Node("collision_avoidance
 
   using std::placeholders::_1;
   cmd_vel_out_pub_ = this->create_publisher<geometry_msgs::msg::Twist>("cmd_vel_out", 10);
-  for (std::size_t i = 0; i < scan_topic_names.size(); i++) {
-    scan_subs_[i] = this->create_subscription<sensor_msgs::msg::LaserScan>(
-      scan_topic_names[i], rclcpp::SensorDataQoS(), std::bind(&CollisionAvoidance2dlCBF::scanCallback, this, _1));
-  }
   cmd_vel_in_sub_ = this->create_subscription<geometry_msgs::msg::Twist>(
     "cmd_vel_in", 1, std::bind(&CollisionAvoidance2dlCBF::cmd_vel_inCallback, this, _1));
+  scan_sub_ = this->create_subscription<sensor_msgs::msg::LaserScan>(
+    scan_topic_name, rclcpp::SensorDataQoS(), std::bind(&CollisionAvoidance2dlCBF::scanCallback, this, _1));
   collision_poly_sub_ = this->create_subscription<geometry_msgs::msg::PolygonStamped>(
     polygon_topic_name, 1, std::bind(&CollisionAvoidance2dlCBF::collision_polygonCallback, this, _1));
 
@@ -68,32 +64,32 @@ void CollisionAvoidance2dlCBF::cmd_vel_inCallback(geometry_msgs::msg::Twist::Con
 void CollisionAvoidance2dlCBF::scanCallback(sensor_msgs::msg::LaserScan::ConstSharedPtr msg)
 {
   auto scan_frame_name = msg->header.frame_id;
-  auto itr = detected_point_.find(scan_frame_name);
-  // scan_frame_name is not found
-  if (itr == detected_point_.end()) {
+  // first time configuration of BtoP
+  if (detected_point_.BtoP.empty()) {
     try {
       geometry_msgs::msg::TransformStamped t = tf_buffer_->lookupTransform(base_frame_name_, scan_frame_name, tf2::TimePointZero);
-      detected_point_[scan_frame_name].BtoS.x = t.transform.translation.x;
-      detected_point_[scan_frame_name].BtoS.y = t.transform.translation.y;
+      detected_point_.BtoS.x = t.transform.translation.x;
+      detected_point_.BtoS.y = t.transform.translation.y;
       double q0, q1, q2, q3;
       q0 = t.transform.rotation.w; q1 = t.transform.rotation.x; q2 = t.transform.rotation.y; q3 = t.transform.rotation.z;
-      detected_point_[scan_frame_name].BtoS_yaw = atan2(2.0 * (q1*q2 + q0*q3), q0*q0 + q1*q1 - q2*q2 - q3*q3);
-      RCLCPP_INFO_STREAM(this->get_logger(), "scan frame name is " << scan_frame_name << " : [" << detected_point_[scan_frame_name].BtoS.x << ", " << detected_point_[scan_frame_name].BtoS.y << ", " << detected_point_[scan_frame_name].BtoS_yaw << "]");
+      detected_point_.BtoS_yaw = atan2(2.0 * (q1*q2 + q0*q3), q0*q0 + q1*q1 - q2*q2 - q3*q3);
+      RCLCPP_INFO_STREAM(this->get_logger(), "scan frame name is " << scan_frame_name << " : [" << detected_point_.BtoS.x << ", " << detected_point_.BtoS.y << ", " << detected_point_.BtoS_yaw << "]");
     } catch (const tf2::TransformException & ex) {
       RCLCPP_WARN(this->get_logger(), "Could not transform %s to %s: %s", base_frame_name_.c_str(), scan_frame_name.c_str(), ex.what());
       return;
     }
-    detected_point_[scan_frame_name].BtoP.resize(msg->ranges.size());
+    detected_point_.BtoP.resize(msg->ranges.size());
   }
+
   double SrP, StoP_yaw;
   for (std::size_t i = 0; i < msg->ranges.size(); i++) {
     SrP = msg->ranges[i];
     if(SrP > msg->range_max) SrP = msg->range_max;
     StoP_yaw = msg->angle_min + i * msg->angle_increment;
-    detected_point_[scan_frame_name].BtoP[i].x = SrP * cos(StoP_yaw + detected_point_[scan_frame_name].BtoS_yaw) + detected_point_[scan_frame_name].BtoS.x;
-    detected_point_[scan_frame_name].BtoP[i].y = SrP * sin(StoP_yaw + detected_point_[scan_frame_name].BtoS_yaw) + detected_point_[scan_frame_name].BtoS.y;
+    detected_point_.BtoP[i].x = SrP * cos(StoP_yaw + detected_point_.BtoS_yaw) + detected_point_.BtoS.x;
+    detected_point_.BtoP[i].y = SrP * sin(StoP_yaw + detected_point_.BtoS_yaw) + detected_point_.BtoS.y;
   }
-  // publishAssistInput();
+  publishAssistInput();
 }
 
 void CollisionAvoidance2dlCBF::collision_polygonCallback(geometry_msgs::msg::PolygonStamped::ConstSharedPtr msg)
@@ -112,15 +108,12 @@ void CollisionAvoidance2dlCBF::collision_polygonCallback(geometry_msgs::msg::Pol
 
 void CollisionAvoidance2dlCBF::publishAssistInput()
 {
-  if (collision_poly_.empty() || detected_point_.empty())
+  if (collision_poly_.empty() || detected_point_.BtoP.empty())
     return;
 
   double B, LgB1, LgB2;
   B = LgB1 = LgB2 = 0;
-  bool is_collision = false;
-  for(auto itr = detected_point_.begin(); itr != detected_point_.end(); ++itr) {
-    is_collision |= summationCBFs(itr->second.BtoP, B, LgB1, LgB2);
-  }
+  bool is_collision = summationCBFs(detected_point_.BtoP, B, LgB1, LgB2);
 
   double I = LgB1*u_ref1_ + LgB2*u_ref2_;
   double J = cbf_param_K_ * B + cbf_param_C_;
