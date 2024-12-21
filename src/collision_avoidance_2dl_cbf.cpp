@@ -22,10 +22,12 @@ CollisionAvoidance2dlCBF::CollisionAvoidance2dlCBF() : Node("collision_avoidance
   this->declare_parameter("scan_topic_names", v);
   auto scan_topic_names = this->get_parameter("scan_topic_names").as_string_array();
   scan_subs_.resize(scan_topic_names.size());
-  this->declare_parameter("gamma", 0.5);
-  gamma_ = this->get_parameter("gamma").as_double();
-  this->declare_parameter("epsilon", 0.001);
-  epsilon_ = this->get_parameter("epsilon").as_double();
+  this->declare_parameter("cbf_param.K", 0.1);
+  cbf_param_K_ = this->get_parameter("cbf_param.K").as_double();
+  this->declare_parameter("cbf_param.C", 0.1);
+  cbf_param_C_ = this->get_parameter("cbf_param.C").as_double();
+  this->declare_parameter("cbf_param.L", 0.001);
+  cbf_param_L_ = this->get_parameter("cbf_param.L").as_double();
   this->declare_parameter("is_debug", false);
   is_debug_ = this->get_parameter("is_debug").as_bool();
 
@@ -43,8 +45,10 @@ CollisionAvoidance2dlCBF::CollisionAvoidance2dlCBF() : Node("collision_avoidance
   tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
   tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
 
-  if(is_debug_)
-    debug_pub_ = this->create_publisher<std_msgs::msg::Float64MultiArray>("cbf_debug", 10);
+  if(is_debug_){
+    debug_values_pub_ = this->create_publisher<std_msgs::msg::Float64MultiArray>("cbf_debug", 10);
+    debug_collision_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("cbf_debug_collision", 10);
+  }
 
   RCLCPP_INFO(this->get_logger(), "Creating node");
 }
@@ -118,11 +122,8 @@ void CollisionAvoidance2dlCBF::publishAssistInput()
     is_collision |= summationCBFs(itr->second.BtoP, B, LgB1, LgB2);
   }
 
-  double K = 0.1;
-  double C = 0.1;
-
   double I = LgB1*u_ref1_ + LgB2*u_ref2_;
-  double J = K*B+C;
+  double J = cbf_param_K_ * B + cbf_param_C_;
   double u1, u2;
   if (I > J) {
     double LgB_sq = LgB1*LgB1 + LgB2*LgB2;
@@ -135,37 +136,37 @@ void CollisionAvoidance2dlCBF::publishAssistInput()
   auto msg = geometry_msgs::msg::Twist();
   msg.linear.x = u1 + u_ref1_;
   msg.angular.z = u2 + u_ref2_;
-  // msg.linear.x = (abs(msg.linear.x) < 0.01) ? 0 : msg.linear.x;
-  // msg.angular.z = (abs(msg.angular.z) < 0.1) ? 0 : msg.angular.z;
   cmd_vel_out_pub_->publish(msg);
 
   if (is_collision) {
-    RCLCPP_WARN_STREAM(this->get_logger(), "Set a larger epsilon. [epsilon, h]: [" << epsilon_ << ", " << B << "]");
+    RCLCPP_WARN_STREAM(this->get_logger(), "Set a smaller K: " << cbf_param_K_);
   }
 
   if (is_debug_) {
-    auto debug_msg = std_msgs::msg::Float64MultiArray();
-    debug_msg.data.push_back(B);
-    debug_msg.data.push_back(I);
-    debug_msg.data.push_back(J);
-    debug_msg.data.push_back(gamma_);
-    debug_msg.data.push_back(epsilon_);
+    auto debug_values_msg = std_msgs::msg::Float64MultiArray();
+    debug_values_msg.data.push_back(B);
+    debug_values_msg.data.push_back(I);
+    debug_values_msg.data.push_back(J);
+    debug_values_msg.data.push_back(cbf_param_K_);
+    debug_values_msg.data.push_back(cbf_param_C_);
+    debug_values_msg.data.push_back(cbf_param_L_);
     try {
       geometry_msgs::msg::TransformStamped t = tf_buffer_->lookupTransform("odom", "base_link", tf2::TimePointZero);
       double q0, q1, q2, q3;
       q0 = t.transform.rotation.w; q1 = t.transform.rotation.x; q2 = t.transform.rotation.y; q3 = t.transform.rotation.z;
-      debug_msg.data.push_back(t.transform.translation.x);
-      debug_msg.data.push_back(t.transform.translation.y);
-      debug_msg.data.push_back(atan2(2.0 * (q1*q2 + q0*q3), q0*q0 + q1*q1 - q2*q2 - q3*q3));
+      debug_values_msg.data.push_back(t.transform.translation.x);
+      debug_values_msg.data.push_back(t.transform.translation.y);
+      debug_values_msg.data.push_back(atan2(2.0 * (q1*q2 + q0*q3), q0*q0 + q1*q1 - q2*q2 - q3*q3));
     } catch (const tf2::TransformException & ex) {
     }
-    debug_pub_->publish(debug_msg);
+    debug_values_pub_->publish(debug_values_msg);
   }
 }
 
 bool CollisionAvoidance2dlCBF::summationCBFs(const std::vector<Point> BtoP, double& B, double& LgB1, double& LgB2)
 {
   bool collision_check = false;
+  pcl::PointCloud<pcl::PointXYZI>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZI>());
   std::size_t N = BtoP.size();
   for (std::size_t i = 0; i < N; i++) {
     // step 1: calculate r_i
@@ -176,9 +177,17 @@ bool CollisionAvoidance2dlCBF::summationCBFs(const std::vector<Point> BtoP, doub
     Point BtoC;
     std::size_t poly_num;
     if (!calculatePolygonIntersection(BtoP[i], BtoC, poly_num)) {
-      // RCLCPP_ERROR(this->get_logger(), "Something is wrong with the polygon settings.");
-      // RCLCPP_ERROR_STREAM(this->get_logger(), "r_i, theta_i : " << r_i << ", " << theta_i);
+      RCLCPP_ERROR(this->get_logger(), "Something is wrong with the polygon settings.");
+      RCLCPP_ERROR_STREAM(this->get_logger(), "r_i, theta_i : " << r_i << ", " << theta_i);
       continue;
+    }
+    if(is_debug_){
+      pcl::PointXYZI point;
+      point.x = BtoC.x;
+      point.y = BtoC.y;
+      point.z = 0.01;
+      point.intensity = 1.0;
+      cloud->points.push_back(point);
     }
 
     // step 3: calculate r_c(theta_i) and drc_dtheta(theta_i)
@@ -192,7 +201,6 @@ bool CollisionAvoidance2dlCBF::summationCBFs(const std::vector<Point> BtoP, doub
     double drc_dtheta = r_perp*tan(theta_i - theta_perp)/(cos(theta_i - theta_perp));
 
     // step 4: calculate B and LgB
-    double L = 0.01;
     double ri_rc = r_i - r_ci;
     if (ri_rc < 0.0) {
       RCLCPP_ERROR_STREAM(this->get_logger(), "r_i - r_ci < 0: " << r_i << ", " << r_ci << ", " << theta_i);
@@ -200,11 +208,18 @@ bool CollisionAvoidance2dlCBF::summationCBFs(const std::vector<Point> BtoP, doub
       continue;
     }
     double ri_rc_sq = ri_rc * ri_rc;
+    double L = cbf_param_L_;
     B += 1.0/ri_rc + L*(r_i*r_i + 1.0/r_ci);
     double dBdx1 = -1.0/ri_rc_sq + 2.0*L*r_i;
     double dBdx2 = +1.0/ri_rc_sq + L/(r_ci*r_ci);
     LgB1 += dBdx1*(-cos(theta_i));
     LgB2 += dBdx1*sin(theta_i)/r_i*drc_dtheta + dBdx2*(-drc_dtheta);
+  }
+  if(is_debug_){
+    sensor_msgs::msg::PointCloud2 cloud_msg;
+    pcl::toROSMsg(*cloud, cloud_msg);
+    cloud_msg.header.frame_id = base_frame_name_;
+    debug_collision_pub_->publish(cloud_msg);
   }
   return collision_check;
 }

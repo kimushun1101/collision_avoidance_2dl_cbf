@@ -18,7 +18,6 @@
 #include <geometry_msgs/msg/twist.hpp>
 #include <geometry_msgs/msg/polygon_stamped.hpp>
 #include <sensor_msgs/msg/laser_scan.hpp>
-#include <std_msgs/msg/float64_multi_array.hpp>
 #include <tf2/exceptions.h>
 #include <tf2_ros/transform_listener.h>
 #include <tf2_ros/buffer.h>
@@ -30,7 +29,14 @@
 #include <iostream>
 #include <fstream>
 #include <float.h>
-#include <map> 
+#include <map>
+
+// for debug
+#include <std_msgs/msg/float64_multi_array.hpp>
+#include <sensor_msgs/msg/point_cloud2.hpp>
+#include <pcl/point_cloud.h>
+#include <pcl/point_types.h>
+#include <pcl_conversions/pcl_conversions.h>
 
 class CollisionAvoidance2dlCBF : public rclcpp::Node
 {
@@ -63,12 +69,13 @@ private:
   std::shared_ptr<tf2_ros::TransformListener> tf_listener_{nullptr};
 
   rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_out_pub_;
-  rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr debug_pub_;
+  rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr debug_values_pub_;
+  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr debug_collision_pub_;
   rclcpp::Subscription<geometry_msgs::msg::Twist>::ConstSharedPtr cmd_vel_in_sub_;
   std::vector<rclcpp::Subscription<sensor_msgs::msg::LaserScan>::ConstSharedPtr> scan_subs_;
   rclcpp::Subscription<geometry_msgs::msg::PolygonStamped>::ConstSharedPtr collision_poly_sub_;
 
-  double gamma_, epsilon_;
+  double cbf_param_K_, cbf_param_C_, cbf_param_L_;
   std::string base_frame_name_;
   std::vector<Point> collision_poly_;
   std::map<std::string, Scan> detected_point_;

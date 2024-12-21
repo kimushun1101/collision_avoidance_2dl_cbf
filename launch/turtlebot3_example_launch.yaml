@@ -26,9 +26,10 @@ launch:
     param:
     - {name: "polygon_topic_name", value: "robot_polygon"}
     - {name: "scan_topic_names", value: ["scan"]}
-    - {name: "gamma", value: 0.5}
-    - {name: "epsilon", value: 0.001}
-    - {name: "is_debug", value: true}
+    - {name: "cbf_param.K", value: 0.1}
+    - {name: "cbf_param.C", value: 0.1}
+    - {name: "cbf_param.L", value: 0.001}
+    - {name: "is_debug", value: false}
 
 - node:
     pkg: "collision_avoidance_2dl_cbf"
@@ -36,7 +37,7 @@ launch:
     param:
     - {name: "base_frame_id", value: "base_link"}
     - {name: "plot_count", value: 100}
-    - {name: "robot.x", value: -0.032}
+    - {name: "robot.x", value: -0.32}
     - {name: "robot.y", value: 0.0}
     - {name: "robot.r", value: 0.55}
 
