@@ -44,6 +44,7 @@ Publish
 export ROS_WORKSPACE=$HOME/ros2_ws
 git clone https://github.com/kimushun1101/collision_avoidance_2dl_cbf.git $ROS_WORKSPACE/src/collision_avoidance_2dl_cbf
 cd $ROS_WORKSPACE && rosdep install -y --from-paths src
+sudo apt install libpcl-dev
 colcon build --symlink-install
 source $ROS_WORKSPACE/install/setup.bash
 export LIBGL_ALWAYS_SOFTWARE=1
