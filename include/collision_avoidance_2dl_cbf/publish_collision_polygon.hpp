@@ -37,6 +37,6 @@ private:
   rclcpp::Publisher<geometry_msgs::msg::PolygonStamped>::SharedPtr collision_poly_pub_;
   rclcpp::TimerBase::SharedPtr timer_;
   std::string base_frame_id_;
-  int plot_count_;
+  std::size_t plot_count_;
   Circle circle_;
 };

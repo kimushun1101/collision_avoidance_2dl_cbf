@@ -20,13 +20,19 @@ PublishCollisionPolygon::PublishCollisionPolygon() : Node("publish_collision_pol
   this->declare_parameter("base_frame_id", "base_link");
   base_frame_id_ = this->get_parameter("base_frame_id").as_string();
   this->declare_parameter("plot_count", 50);
-  plot_count_ = this->get_parameter("plot_count").as_int();
   this->declare_parameter("circle.x", -0.032);
   circle_.x = this->get_parameter("circle.x").as_double();
   this->declare_parameter("circle.y", 0.0);
   circle_.y = this->get_parameter("circle.y").as_double();
   this->declare_parameter("circle.r", 0.35);
   circle_.r = this->get_parameter("circle.r").as_double();
+
+  int plot_count_param = this->get_parameter("plot_count").as_int();
+  if (plot_count_param < 0) {
+    RCLCPP_ERROR(this->get_logger(), "plot_count must be non-negative!");
+    throw std::runtime_error("Invalid plot_count parameter");
+  }
+  plot_count_ = static_cast<std::size_t>(plot_count_param);
 
   collision_poly_pub_ = this->create_publisher<geometry_msgs::msg::PolygonStamped>("collision_polygon", 10);
   std::chrono::milliseconds sampling_period{(int)(1000.0)};
